@@ -8,8 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Earthy Harmony -->
-    <!-- Application Structure Plan: The application is structured as a single-page dashboard with two main, switchable views: "Care Calendar" and "Plant Profiles & Troubleshooting". This task-oriented design was chosen over a linear report format for superior usability. Users can immediately select a plant and view its specific care schedule without scrolling through irrelevant information. The "Care Calendar" view uses a dropdown to filter content, presenting a focused look at the 4-week cycle and seasonal needs. The "Plant Profiles" view acts as an encyclopedia, using an accordion layout for quick access to troubleshooting tips. This interactive, non-linear structure allows users to quickly find answers to specific questions (e.g., "What do I do for my Rose in Week 2?") or explore in-depth information as needed, making the content far more accessible and practical for everyday use. -->
-    <!-- Visualization & Content Choices: Report Info: Weekly tasks (watering, fertilizing) & Seasonal needs -> Goal: Show care intensity over time -> Viz/Presentation: Interactive Bar Chart (Chart.js) -> Interaction: Updates when a new plant is selected from the dropdown -> Justification: A chart provides a quick, visual summary of how care needs (especially watering) change dramatically between seasons, which is more impactful and easier to grasp than text alone. Report Info: Troubleshooting symptoms and solutions -> Goal: Organize complex Q&A content -> Viz/Presentation: Accordion (HTML/JS) -> Interaction: Click to expand/collapse answers -> Justification: An accordion prevents overwhelming the user with a long wall of text, allowing them to focus only on the specific problem they are facing. This improves scannability and problem-solving efficiency. All other content is presented in dynamically updated HTML content blocks for clarity and responsiveness. -->
+    <!-- Application Structure Plan: The application is structured as a single-page dashboard with two main, switchable views: "Care Calendar" and "Plant Profiles & Troubleshooting". This task-oriented design was chosen over a linear report format for superior usability. Users can immediately select a plant and view its specific care schedule without scrolling through irrelevant information. The "Care Calendar" view uses a dropdown to filter content, presenting a focused look at the 4-week cycle and seasonal needs. The "Plant Profiles" view acts as an encyclopedia, using an accordion layout for quick access to troubleshooting tips. This interactive, non-linear structure allows users to quickly find answers to specific questions (e.g., "What do I do for my Rose in Week 2?") or explore in-depth information as needed, making the content far more accessible and practical for everyday use. Gemini API features are integrated to provide dynamic problem-solving and proactive advice. -->
+    <!-- Visualization & Content Choices: Report Info: Weekly tasks (watering, fertilizing) & Seasonal needs -> Goal: Show care intensity over time -> Viz/Presentation: Interactive Bar Chart (Chart.js) -> Interaction: Updates when a new plant is selected from the dropdown -> Justification: A chart provides a quick, visual summary of how care needs (especially watering) change dramatically between seasons, which is more impactful and easier to grasp than text alone. Report Info: Troubleshooting symptoms and solutions -> Goal: Organize complex Q&A content -> Viz/Presentation: Accordion (HTML/JS) -> Interaction: Click to expand/collapse answers -> Justification: An accordion prevents overwhelming the user with a long wall of text, allowing them to focus only on the specific problem they are facing. This improves scannability and problem-solving efficiency. Gemini API is used for a dynamic "AI Plant Doctor" feature, allowing users to describe custom problems and get tailored advice, going beyond the static troubleshooting guide. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
@@ -59,13 +59,25 @@
                 height: 400px;
             }
         }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #86A873;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="antialiased">
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-[#4A5759]">Interactive Plant Care Dashboard</h1>
-            <p class="mt-2 text-lg text-gray-600">Your all-in-one guide to a thriving garden, tailored for the Indian climate.</p>
+            <p class="mt-2 text-lg text-gray-600">Your all-in-one guide to a thriving garden, enhanced with AI.</p>
         </header>
 
         <main>
@@ -105,6 +117,13 @@
                             <canvas id="seasonalChart"></canvas>
                         </div>
                     </div>
+                     <hr class="my-8 border-gray-200">
+                     <div class="text-center">
+                        <h3 class="text-2xl font-bold text-center text-[#4A5759] mb-4">AI-Powered Proactive Tip</h3>
+                        <button id="get-proactive-tip" class="bg-[#86A873] text-white font-bold py-2 px-4 rounded-lg hover:bg-[#6c8a5a] transition-colors">✨ Get Proactive Tip</button>
+                        <div id="proactive-tip-loader" class="hidden mx-auto mt-4 loader"></div>
+                        <div id="proactive-tip-result" class="mt-4 p-4 bg-gray-50 rounded-lg text-left hidden"></div>
+                    </div>
                 </div>
             </div>
 
@@ -115,6 +134,15 @@
                         <p class="text-center text-gray-600" id="profile-intro"></p>
                     </div>
                     <div id="troubleshooting-guide" class="space-y-4">
+                    </div>
+                    <hr class="my-8 border-gray-200">
+                    <div class="text-center">
+                        <h3 class="text-2xl font-bold text-center text-[#4A5759] mb-4">AI Plant Doctor</h3>
+                        <p class="text-center text-gray-600 mb-4">Can't find your issue above? Describe the symptoms below and let our AI assistant help diagnose the problem.</p>
+                        <textarea id="symptom-input" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#86A873] focus:border-[#86A873]" rows="4" placeholder="e.g., My rose has yellow leaves with brown spots and some sticky stuff on the stem..."></textarea>
+                        <button id="ai-diagnosis-btn" class="mt-4 bg-[#86A873] text-white font-bold py-2 px-4 rounded-lg hover:bg-[#6c8a5a] transition-colors">✨ Get AI Diagnosis</button>
+                        <div id="ai-diagnosis-loader" class="hidden mx-auto mt-4 loader"></div>
+                        <div id="ai-diagnosis-result" class="mt-4 p-4 bg-gray-50 rounded-lg text-left hidden"></div>
                     </div>
                 </div>
             </div>
@@ -449,7 +477,84 @@ const navProfiles = document.getElementById('nav-profiles');
 const viewCalendar = document.getElementById('view-calendar');
 const viewProfiles = document.getElementById('view-profiles');
 
+const getProactiveTipBtn = document.getElementById('get-proactive-tip');
+const proactiveTipLoader = document.getElementById('proactive-tip-loader');
+const proactiveTipResult = document.getElementById('proactive-tip-result');
+
+const symptomInput = document.getElementById('symptom-input');
+const aiDiagnosisBtn = document.getElementById('ai-diagnosis-btn');
+const aiDiagnosisLoader = document.getElementById('ai-diagnosis-loader');
+const aiDiagnosisResult = document.getElementById('ai-diagnosis-result');
+
 let seasonalChart;
+
+async function callGemini(prompt, loaderElement, resultElement) {
+    loaderElement.classList.remove('hidden');
+    resultElement.classList.add('hidden');
+    resultElement.textContent = '';
+
+    try {
+        let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+        const payload = { contents: chatHistory };
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`API call failed with status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.candidates && result.candidates.length > 0 &&
+            result.candidates[0].content && result.candidates[0].content.parts &&
+            result.candidates[0].content.parts.length > 0) {
+            const text = result.candidates[0].content.parts[0].text;
+            resultElement.innerHTML = text.replace(/\n/g, '<br>');
+        } else {
+            throw new Error('Unexpected API response structure');
+        }
+
+    } catch (error) {
+        resultElement.textContent = `An error occurred: ${error.message}. Please try again.`;
+        console.error('Gemini API Error:', error);
+    } finally {
+        loaderElement.classList.add('hidden');
+        resultElement.classList.remove('hidden');
+    }
+}
+
+function getCurrentIndianSeason() {
+    const month = new Date().getMonth(); // 0 = January, 11 = December
+    if (month >= 2 && month <= 5) return 'Summer'; // March to June
+    if (month >= 6 && month <= 8) return 'Monsoon'; // July to September
+    return 'Winter'; // October to February
+}
+
+getProactiveTipBtn.addEventListener('click', () => {
+    const selectedPlant = plantSelector.value;
+    const currentSeason = getCurrentIndianSeason();
+    const prompt = `Provide a single, highly specific, proactive care tip for a ${selectedPlant} plant during the ${currentSeason} season in the Indian climate. The tip should be concise and actionable.`;
+    callGemini(prompt, proactiveTipLoader, proactiveTipResult);
+});
+
+aiDiagnosisBtn.addEventListener('click', () => {
+    const selectedPlant = plantSelector.value;
+    const symptoms = symptomInput.value;
+    if (!symptoms.trim()) {
+        aiDiagnosisResult.textContent = 'Please describe the symptoms first.';
+        aiDiagnosisResult.classList.remove('hidden');
+        return;
+    }
+    const prompt = `I have a ${selectedPlant} plant. It is showing these symptoms: "${symptoms}". Based on these symptoms, what are the most likely causes and what are the specific, actionable steps I should take to fix it? Provide a concise answer.`;
+    callGemini(prompt, aiDiagnosisLoader, aiDiagnosisResult);
+});
+
 
 function populatePlantSelector() {
     const plants = Object.keys(plantData);
