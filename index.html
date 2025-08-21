@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Plant Care Dashboard</title>
+    <title>EcoGarden Care</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Sage & Serenity -->
-    <!-- Application Structure Plan: The application is structured as a single-page dashboard with two main, switchable views: "Care Calendar" and "Plant Profiles & Troubleshooting". This task-oriented design was chosen over a linear report format for superior usability. Users can immediately select a plant and view its specific care schedule without scrolling through irrelevant information. The "Care Calendar" view uses a dropdown to filter content, presenting a focused look at the 4-week cycle and seasonal needs. The "Plant Profiles" view acts as an encyclopedia, using an accordion layout for quick access to troubleshooting tips. This interactive, non-linear structure allows users to quickly find answers to specific questions (e.g., "What do I do for my Rose in Week 2?") or explore in-depth information as needed, making the content far more accessible and practical for everyday use. Gemini API features are integrated to provide dynamic problem-solving and proactive advice. -->
-    <!-- Visualization & Content Choices: Report Info: Weekly tasks (watering, fertilizing) & Seasonal needs -> Goal: Show care intensity over time -> Viz/Presentation: Interactive Bar Chart (Chart.js) -> Interaction: Updates when a new plant is selected from the dropdown -> Justification: A chart provides a quick, visual summary of how care needs (especially watering) change dramatically between seasons, which is more impactful and easier to grasp than text alone. Report Info: Troubleshooting symptoms and solutions -> Goal: Organize complex Q&A content -> Viz/Presentation: Accordion (HTML/JS) -> Interaction: Click to expand/collapse answers -> Justification: An accordion prevents overwhelming the user with a long wall of text, allowing them to focus only on the specific problem they are facing. This improves scannability and problem-solving efficiency. Gemini API is used for a dynamic "AI Plant Doctor" feature, allowing users to describe custom problems and get tailored advice, going beyond the static troubleshooting guide. -->
+    <!-- Application Structure Plan: The application is structured as a single-page dashboard with two main, switchable views: "Care Calendar" and "Plant Profiles & Troubleshooting". This task-oriented design was chosen over a linear report format for superior usability. Users can immediately select a plant via a new search feature. The "Care Calendar" view presents a focused look at the 4-week cycle and seasonal needs. The "Plant Profiles" view acts as an encyclopedia with an enhanced conversational AI Plant Doctor. This interactive, non-linear structure allows users to quickly find answers to specific questions or explore in-depth information as needed. -->
+    <!-- Visualization & Content Choices: Report Info: Weekly tasks & Seasonal needs -> Goal: Show care intensity over time -> Viz/Presentation: Interactive Bar Chart (Chart.js) -> Interaction: Updates when a new plant is selected -> Justification: A chart provides a quick, visual summary of how care needs change seasonally. Report Info: Troubleshooting -> Goal: Organize complex Q&A -> Viz/Presentation: Accordion & Conversational AI (HTML/JS/Gemini) -> Interaction: Click to expand, type/speak/upload to chat, edit prompts -> Justification: The accordion handles static info, while the conversational AI with memory and structured output offers a dynamic, user-friendly way to solve unique problems. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
@@ -23,16 +23,6 @@
         }
         .nav-button {
             transition: all 0.3s ease;
-        }
-        .plant-select {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236B8A7A' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-            padding-right: 2.5rem;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
         }
         .accordion-content {
             max-height: 0;
@@ -79,12 +69,24 @@
             background-color: #F1F5F9;
             align-self: flex-start;
         }
+        .input-icon-wrapper {
+            position: absolute;
+            top: 50%;
+            right: 0.5rem;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .input-icon {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="antialiased">
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <header class="text-center mb-8 relative">
-            <h1 class="text-4xl font-bold text-[#3D403D]">Interactive Plant Care Dashboard</h1>
+            <h1 class="text-4xl font-bold text-[#3D403D]">EcoGarden Care</h1>
             <p class="mt-2 text-lg text-gray-600">Your all-in-one guide to a thriving garden, enhanced with AI.</p>
             <button id="notification-btn" class="absolute top-0 right-0 p-2 bg-white rounded-full shadow hover:bg-gray-100 transition-colors" title="Enable Care Reminders">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#6B8A7A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,10 +98,10 @@
         <main>
             <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
-                    <div class="w-full sm:w-auto mb-4 sm:mb-0">
-                        <label for="plant-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Plant:</label>
-                        <select id="plant-selector" class="plant-select w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#6B8A7A] focus:border-[#6B8A7A]">
-                        </select>
+                    <div class="w-full sm:w-72 mb-4 sm:mb-0 relative">
+                        <label for="plant-search" class="block text-sm font-medium text-gray-700 mb-1">Search or Select a Plant:</label>
+                        <input type="text" id="plant-search" placeholder="E.g., Rose" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#6B8A7A] focus:border-[#6B8A7A]">
+                        <div id="plant-search-results" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto hidden"></div>
                     </div>
                     <div class="flex space-x-2 p-1 bg-gray-100 rounded-lg">
                         <button id="nav-calendar" class="nav-button active w-full sm:w-auto px-6 py-2 rounded-md font-semibold">Care Calendar</button>
@@ -151,20 +153,23 @@
                     <hr class="my-8 border-gray-200">
                     <div class="text-center">
                         <h3 class="text-2xl font-bold text-center text-[#3D403D] mb-4">AI Plant Doctor</h3>
-                        <p class="text-center text-gray-600 mb-4 max-w-3xl mx-auto">Start a conversation with our AI assistant. Describe the symptoms and upload a photo for a visual diagnosis.</p>
+                        <p class="text-center text-gray-600 mb-4 max-w-3xl mx-auto">Start a conversation with our AI assistant. Describe symptoms, upload a photo, or use your voice.</p>
                         
                         <div id="chat-window" class="mt-4 p-4 bg-gray-50 rounded-lg text-left hidden h-64 overflow-y-auto flex flex-col space-y-2"></div>
                         
-                        <div class="flex items-start space-x-3 mt-4">
-                            <textarea id="symptom-input" class="flex-grow w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#6B8A7A] focus:border-[#6B8A7A]" rows="3" placeholder="e.g., My rose has yellow leaves with brown spots..."></textarea>
-                            <label for="image-upload" class="cursor-pointer p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <input type="file" id="image-upload" class="hidden" accept="image/*">
-                            </label>
+                        <div class="relative mt-4">
+                            <textarea id="symptom-input" class="w-full p-3 pr-20 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#6B8A7A] focus:border-[#6B8A7A]" rows="2" placeholder="Ask the AI Doctor..."></textarea>
+                            <div class="input-icon-wrapper">
+                                <label for="image-upload" class="input-icon text-gray-500 hover:text-gray-800">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    <input type="file" id="image-upload" class="hidden" accept="image/*">
+                                </label>
+                                <button id="speech-btn" class="input-icon text-gray-500 hover:text-gray-800">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                </button>
+                            </div>
                         </div>
+
                         <div id="image-preview-container" class="mt-2 text-left hidden">
                             <img id="image-preview" class="max-h-24 rounded-lg shadow-md inline-block" src="" alt="Image Preview">
                             <button id="remove-image-btn" class="ml-2 text-xs text-red-600 hover:underline">Remove</button>
@@ -179,703 +184,814 @@
     </div>
 
 <script>
-const plantData = {
-    "Hydrangea macrophylla": {
-        "intro": "The most common frustration with Hydrangea macrophylla is a lack of flowers. This is almost always linked to a misunderstanding of its unique blooming cycle. This species blooms on 'old wood,' meaning the flower buds for the next season form on the stems grown during the current summer and autumn.",
-        "weekly": [
-            { "title": "Week 1: Primary Actions", "tasks": "<strong>Watering:</strong> Check top 2 inches of soil; water deeply if dry.<br><strong>Fertilizing:</strong> Apply vermicompost.<br><strong>Pest/Disease Control:</strong> Inspect leaves for fungal spots, aphids. Apply preventative neem oil spray.<br><strong>Pruning/Maintenance:</strong> Deadhead spent flowers." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture as needed.<br><strong>Pest/Disease Control:</strong> Monitor for any new pest/disease signs.<br><strong>Pruning/Maintenance:</strong> General check-up." },
-            { "title": "Week 3: Follow-up Actions", "tasks": "<strong>Watering:</strong> Check top 2 inches of soil; water deeply if dry.<br><strong>Fertilizing:</strong> Apply compost tea or seaweed extract.<br><strong>Pest/Disease Control:</strong> Follow up on any issues from Week 1. Re-apply neem oil if needed.<br><strong>Pruning/Maintenance:</strong> Deadhead spent flowers." },
-            { "title": "Week 4: Preparation", "tasks": "<strong>Watering:</strong> Check soil moisture as needed.<br><strong>Pest/Disease Control:</strong> Final check for the month.<br><strong>Pruning/Maintenance:</strong> Tidy up around the plant base." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water 2-3 times/week or more; watch for wilting. Apply high-phosphorus NPK (e.g., 10:30:20) for blooms. Ensure afternoon shade to prevent leaf scorch. Late summer is the time for light shaping/pruning after flowering ends." },
-            { "season": "Monsoon", "care": "Drastically reduce watering; ensure excellent drainage to prevent root rot. High risk of fungal spots; improve air circulation. Check for waterlogging after heavy rain. Remove any fallen leaves/debris that can harbor fungus." },
-            { "season": "Winter", "care": "Water only when soil is dry. Cease fertilizing. Leave old flower heads on to protect new buds from frost. Ensure frost protection for potted plants in cold regions. Prepare frost protection if temperatures are dropping." }
-        ],
-        "chartData": [3, 1, 1],
-        "troubleshooting": [
-            { "symptom": "No blooms", "cause": "Pruning at the wrong time (spring); insufficient light; excessive nitrogen fertilizer; or a late spring frost.", "solution": "Adhere strictly to the 'old wood' pruning rule (only prune after flowering in late summer). Relocate to a spot with ample morning sun and afternoon shade. Use a fertilizer with high Phosphorus (P)." },
-            { "symptom": "Wilting leaves, especially in the afternoon", "cause": "Large leaves lose moisture rapidly from either underwatering or intense heat stress, even if the soil is moist.", "solution": "Check soil. If dry, water deeply. If moist, the plant is heat-stressed; ensure afternoon shade. It will usually recover in the evening." },
-            { "symptom": "Yellowing leaves (Chlorosis)", "cause": "Incorrect soil pH 'locking' nutrients, or a general nutrient deficiency.", "solution": "Test soil pH. To encourage blue flowers, make soil more acidic (pH 5.5–6.0) with aluminium sulfate. For pink flowers, make it more alkaline with garden lime." },
-            { "symptom": "Brown or black spots on leaves", "cause": "Fungal diseases like leaf spot, which thrive in humid, wet conditions (monsoon).", "solution": "Improve air circulation. Water only the soil, keeping foliage dry. Remove affected leaves. Apply a preventative spray of neem oil or fungicide during humid weather." }
-        ]
-    },
-    "Gardenia": {
-        "intro": "Gardenias are indicator plants for environmental stability. Their most notorious issue, 'bud drop,' is rarely due to a single cause but is rather a protest against inconsistency in temperature, watering, and light.",
-        "weekly": [
-            { "title": "Week 1: Primary Actions", "tasks": "<strong>Watering:</strong> Keep soil consistently moist but not soggy.<br><strong>Fertilizing:</strong> Apply vermicompost.<br><strong>Pest/Disease Control:</strong> Inspect for aphids, mealybugs. Apply preventative neem oil.<br><strong>Pruning/Maintenance:</strong> Lightly prune to shape after flowering." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Check for bud drop, which can indicate pests or stress.<br><strong>Pruning/Maintenance:</strong> Remove any yellow leaves." },
-            { "title": "Week 3: Follow-up Actions", "tasks": "<strong>Watering:</strong> Keep soil consistently moist.<br><strong>Fertilizing:</strong> Apply a balanced liquid fertilizer.<br><strong>Pest/Disease Control:</strong> Re-apply neem oil if pests were present." },
-            { "title": "Week 4: Preparation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Pruning/Maintenance:</strong> Tidy up." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water thoroughly; mist leaves to increase humidity in dry heat. Fertilize every 2 weeks. Ensure morning sun and afternoon shade. Monitor for caterpillars that eat buds." },
-            { "season": "Monsoon", "care": "Reduce watering; ensure excellent drainage. High risk of fungal disease; apply fungicide if needed. Check for waterlogging. Ensure pot is not directly under heavy roof runoff." },
-            { "season": "Winter", "care": "Reduce watering and feeding significantly. Protect from frost. Maintain in a sheltered spot." }
-        ],
-        "chartData": [3, 1, 1],
-        "troubleshooting": [
-            { "symptom": "Flower buds fall off before opening", "cause": "Abrupt changes in temperature, drafts, inconsistent watering, or pest damage.", "solution": "Place in a sheltered, stable location. Maintain a consistent watering schedule. Inspect buds for tiny pests and treat with neem oil." },
-            { "symptom": "Yellowing leaves with dark green veins", "cause": "Iron deficiency (chlorosis) due to soil being too alkaline (pH > 7.0).", "solution": "Use potting mix for acid-loving plants. Fertilize with an acid-forming product or apply chelated iron. Used tea leaves can also help lower soil pH." },
-            { "symptom": "White, powdery coating on leaves", "cause": "Powdery mildew, a fungal disease from high humidity and poor air circulation.", "solution": "Prune to improve airflow. Avoid overhead watering. Treat with neem oil or a fungicide." }
-        ]
-    },
-    "Rose": {
-        "intro": "Growing roses in the Indian climate is a continuous battle against fungal diseases, especially during the monsoon. A proactive approach focused on fungal management is critical.",
-        "weekly": [
-            { "title": "Week 1: Primary Actions", "tasks": "<strong>Watering:</strong> Water at the base when topsoil is dry.<br><strong>Fertilizing:</strong> Apply slow-release fertilizer (bone meal, neem khal).<br><strong>Pest/Disease Control:</strong> Inspect for aphids, scale, black spot. Apply preventative fungicide.<br><strong>Pruning/Maintenance:</strong> Deadhead spent blooms." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Fertilizing:</strong> Apply liquid manure (e.g., sarson khali solution).<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Pruning/Maintenance:</strong> Remove blind shoots or yellow leaves." },
-            { "title": "Week 3: Follow-up Actions", "tasks": "<strong>Watering:</strong> Water at the base when topsoil is dry.<br><strong>Fertilizing:</strong> Apply slow-release fertilizer.<br><strong>Pest/Disease Control:</strong> Re-apply fungicide/pesticide as needed.<br><strong>Pruning/Maintenance:</strong> Deadhead." },
-            { "title": "Week 4: Preparation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Fertilizing:</strong> Apply liquid manure.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Pruning/Maintenance:</strong> Plough soil around the base." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water deeply and frequently. Provide filtered afternoon sun. Watch for spider mites." },
-            { "season": "Monsoon", "care": "High risk of black spot and dieback. Water only when dry. Ensure excellent drainage. Weekly fungicide spray is advisable. Improve air circulation by trimming inner foliage." },
-            { "season": "Winter", "care": "Reduce watering. Main pruning time is Oct-Dec in North India. Stop fertilizing by late autumn. Post-pruning, apply a thick layer of well-rotted manure." }
-        ],
-        "chartData": [3, 1, 1],
-        "troubleshooting": [
-            { "symptom": "Black spots on leaves, leading to leaf drop", "cause": "Black spot, a fungal disease that spreads on wet foliage.", "solution": "Remove and destroy all infected leaves. Water only in the morning at the plant base. Use a preventative fungicide spray (Mancozeb, etc.) every 10-15 days during monsoon." },
-            { "symptom": "Canes turning black and dying from the tip down", "cause": "Dieback, a fungal infection entering through pruning cuts.", "solution": "Use sterilized shears. Cut back to healthy, white pith. After cutting, apply a fungicide paste to the wound to seal it." },
-            { "symptom": "Clusters of small insects on new shoots", "cause": "Aphids, sap-sucking pests.", "solution": "A strong jet of water can dislodge them. For persistent infestations, spray with insecticidal soap or neem oil." }
-        ]
-    },
-    "Ixora": {
-        "intro": "Ixora are sun-loving plants that need at least 6-8 hours of direct sun to produce abundant blooms. Like Gardenias, they require acidic soil to thrive and absorb nutrients properly.",
-        "weekly": [
-            { "title": "Week 1: Primary Actions", "tasks": "<strong>Watering:</strong> Keep soil evenly moist.<br><strong>Fertilizing:</strong> Apply fertilizer for acid-loving plants.<br><strong>Pest/Disease Control:</strong> Inspect for aphids, scale, mealybugs. Spray with neem oil.<br><strong>Pruning/Maintenance:</strong> Deadhead spent flower clusters." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Check for sooty mold, an indicator of pests.<br><strong>Pruning/Maintenance:</strong> Lightly shape the plant if needed." },
-            { "title": "Week 3: Follow-up Actions", "tasks": "<strong>Watering:</strong> Keep soil evenly moist.<br><strong>Fertilizing:</strong> Re-apply liquid fertilizer.<br><strong>Pest/Disease Control:</strong> Re-apply neem oil if pests were present.<br><strong>Pruning/Maintenance:</strong> Deadhead." },
-            { "title": "Week 4: Preparation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Pruning/Maintenance:</strong> Tidy up." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water regularly; soil should not dry out completely. Fertilize every 4-6 weeks. Ensure 6-8 hours of sunlight for good blooms. Mulch to retain moisture." },
-            { "season": "Monsoon", "care": "Ensure excellent drainage. Propagate from cuttings now. Watch for fungal issues from wet foliage; water at the base." },
-            { "season": "Winter", "care": "Reduce watering and stop fertilizing. Protect from frost (cannot tolerate temps below 15°C). Move potted plants to a warmer, sheltered location." }
-        ],
-        "chartData": [3, 1, 1],
-        "troubleshooting": [
-            { "symptom": "Few or no flowers", "cause": "Insufficient sunlight is the primary reason.", "solution": "Move the plant to the sunniest location available (at least 6-8 hours of direct sun)." },
-            { "symptom": "Yellow leaves (chlorosis)", "cause": "Soil pH is too high (alkaline), locking up iron and manganese.", "solution": "Use an acidic potting mix. Apply a fertilizer formulated for acid-loving plants or supplement with chelated iron. Avoid planting near concrete." },
-            { "symptom": "Pests like aphids or scale insects", "cause": "Common sap-sucking insects, often indicated by sticky residue or black sooty mold.", "solution": "Treat with insecticidal soap or neem oil, ensuring to spray the undersides of leaves. Repeat every 4-7 days until gone." }
-        ]
-    },
-    "Maiden Kamini (Orange Jasmine)": {
-        "intro": "Also known as Orange Jasmine, this plant's fragrant flowers often appear after rain, making the monsoon season a particularly rewarding time. Its primary issue is a sensitivity to overwatering.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water when top inch of soil is dry.<br><strong>Fertilizing:</strong> Apply balanced liquid fertilizer.<br><strong>Pest/Disease Control:</strong> Inspect for mealybugs, spider mites. Spray with neem oil.<br><strong>Pruning:</strong> Prune lightly after flowering to maintain shape." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Maintenance:</strong> Remove any yellow leaves." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water when topsoil is dry.<br><strong>Fertilizing:</strong> Re-apply liquid fertilizer.<br><strong>Pest/Disease Control:</strong> Follow up on any pest issues." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> Tidy up." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Active growing season; fertilize every 4-6 weeks. Ensure 4-6 hours of morning sun; avoid harsh afternoon sun." },
-            { "season": "Monsoon", "care": "Reduce watering; ensure excellent drainage to prevent root rot. Flowers often appear after rain." },
-            { "season": "Winter", "care": "Reduce watering and fertilizing significantly. Foliage remains green all year." }
-        ],
-        "chartData": [3, 2, 1],
-        "troubleshooting": [
-            { "symptom": "Yellowing leaves", "cause": "Typically a sign of overwatering or poor drainage leading to root rot.", "solution": "Ensure the top inch of soil dries out between waterings and that the pot has adequate drainage holes." },
-            { "symptom": "White, cottony masses on stems", "cause": "Mealybugs.", "solution": "Treat with a targeted spray of neem oil or insecticidal soap. For small infestations, wipe off with a cotton swab dipped in rubbing alcohol." }
-        ]
-    },
-    "Crape Jasmine": {
-        "intro": "A hardy and reliable bloomer, Crape Jasmine is generally low-maintenance. Yellowing leaves are the most common sign that it needs a nutritional boost.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water when topsoil is slightly dry.<br><strong>Fertilizing:</strong> Apply a balanced, water-soluble fertilizer.<br><strong>Pest/Disease Control:</strong> Inspect for aphids, mealybugs. Spray with neem oil.<br><strong>Maintenance:</strong> Remove yellowed leaves." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Maintenance:</strong> General check-up." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water when topsoil is slightly dry.<br><strong>Fertilizing:</strong> Apply organic compost.<br><strong>Pest/Disease Control:</strong> Follow up on any pest issues." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> Tidy up." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water regularly. Fertilize in early summer. Main pruning is late summer/early fall after flowering. Requires 6-7 hours of sun but appreciates some afternoon shade." },
-            { "season": "Monsoon", "care": "Thrives in this season. Ensure good drainage. Watch for leaf spot diseases in prolonged wetness." },
-            { "season": "Winter", "care": "Reduce watering and cease fertilizing. Protect from frost in cold regions." }
-        ],
-        "chartData": [3, 3, 1],
-        "troubleshooting": [
-            { "symptom": "Yellowing leaves", "cause": "A general nutrient deficiency, often nitrogen.", "solution": "A balanced fertilizer application during the growing season will resolve this. Ensure the soil is not waterlogged." },
-            { "symptom": "Pests on new growth", "cause": "Susceptible to pests like whiteflies and caterpillars.", "solution": "These can be managed with regular neem oil sprays, especially on the undersides of leaves." }
-        ]
-    },
-    "Croton plant": {
-        "intro": "Crotons are known for their dramatic reaction to environmental changes. The most alarming behavior, sudden leaf drop, is often a sign of shock rather than a fatal disease.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water when top 2 inches of soil are dry.<br><strong>Fertilizing:</strong> Apply a balanced liquid fertilizer, diluted to half-strength.<br><strong>Pest/Disease Control:</strong> Inspect for spider mites, mealybugs. Wipe leaves with a damp cloth.<br><strong>Pruning:</strong> Trim leggy growth to encourage bushiness." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Monitor for pests, especially on leaf undersides.<br><strong>Maintenance:</strong> Rotate the plant for even growth." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water when top 2 inches of soil are dry.<br><strong>Fertilizing:</strong> Re-apply diluted liquid fertilizer.<br><strong>Pest/Disease Control:</strong> Follow up on any pest issues.<br><strong>Maintenance:</strong> Wipe leaves to keep them dust-free." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> General check-up." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Active growing season. Water more frequently, keep soil evenly moist. Fertilize monthly. Needs bright, indirect light to maintain color; avoid harsh direct sun." },
-            { "season": "Monsoon", "care": "Ensure excellent drainage. High humidity is beneficial. Watch for root rot if drainage is poor." },
-            { "season": "Winter", "care": "Reduce watering and stop fertilizing. Protect from cold drafts (temps below 15°C). Ensure it gets enough bright light to prevent color loss." }
-        ],
-        "chartData": [3, 2, 1],
-        "troubleshooting": [
-            { "symptom": "Sudden dropping of healthy-looking leaves", "cause": "Plant shock from a change in location, temperature fluctuations, drafts, or underwatering/overwatering.", "solution": "Move the plant to a permanent location with stable temperatures. Maintain a consistent watering schedule. The plant will typically regrow leaves once it acclimates." },
-            { "symptom": "Vibrant leaf colors fading to green", "cause": "Insufficient light. The brilliant colors are produced in response to bright light.", "solution": "Move the plant to a location where it receives at least 6-8 hours of bright, indirect sunlight daily." },
-            { "symptom": "Webbing on leaves, tiny moving dots", "cause": "Spider mites, which thrive in dry conditions.", "solution": "Regularly wipe the leaves (top and bottom) with a damp cloth. Treat infestations with insecticidal soap or neem oil." }
-        ]
-    },
-    "Marigold": {
-        "intro": "Marigolds are cheerful, easy-to-grow annuals. While they naturally repel some pests, their biggest enemy in the Indian climate is root rot during the monsoon.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water when the top inch of soil is dry.<br><strong>Fertilizing:</strong> Apply a balanced, slow-release fertilizer.<br><strong>Pest/Disease Control:</strong> Inspect for aphids, spider mites.<br><strong>Pruning:</strong> Deadhead (pinch off) spent flowers to encourage continuous blooming." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Maintenance:</strong> Continue deadheading." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water when the top inch of soil is dry.<br><strong>Fertilizing:</strong> Re-apply slow-release fertilizer.<br><strong>Pest/Disease Control:</strong> Spray with neem oil if pests are seen.<br><strong>Pruning:</strong> Pinch the tops of young plants to make them bushy." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> Continue deadheading." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water more frequently in high heat. Thrives in full sun, which is essential for heavy blooms." },
-            { "season": "Monsoon", "care": "High risk of root rot. Ensure excellent drainage and avoid overhead watering. Prune some foliage for better airflow if plants are dense." },
-            { "season": "Winter", "care": "Reduce watering. Protect from severe frost. Most annual varieties will complete their life cycle." }
-        ],
-        "chartData": [2, 1, 1],
-        "troubleshooting": [
-            { "symptom": "Plant base is brown/mushy, plant is wilting", "cause": "Root rot from overwatering, especially during monsoon.", "solution": "Prevention is key. Use a well-draining soil mix. Ensure pots have large drainage holes. Avoid letting the pot sit in a saucer of water." },
-            { "symptom": "Few or no blooms", "cause": "Insufficient sunlight or too much nitrogen fertilizer.", "solution": "Ensure the plant gets at least 6 hours of direct sun. Use a fertilizer lower in nitrogen (N) and higher in phosphorus (P)." }
-        ]
-    },
-    "Red Lady Papaya": {
-        "intro": "Papaya care is a balance between providing enough water for fruit development and preventing fatal root rot, especially during the monsoon.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water deeply but infrequently; allow soil to dry slightly.<br><strong>Fertilizing:</strong> Apply a balanced fertilizer (N, P, K).<br><strong>Pest/Disease Control:</strong> Inspect for ring spot virus symptoms, aphids, and root rot.<br><strong>Maintenance:</strong> Remove old, yellowing lower leaves." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Fertilizing:</strong> Apply micronutrients (Zinc, Boron) via foliar spray.<br><strong>Pest/Disease Control:</strong> Monitor for vectors like aphids.<br><strong>Maintenance:</strong> Check for fruit development." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water deeply but infrequently.<br><strong>Fertilizing:</strong> Re-apply balanced fertilizer.<br><strong>Pest/Disease Control:</strong> Spray with fungicide if foot rot is a concern.<br><strong>Maintenance:</strong> Remove any weeds around the base." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> Support the trunk if heavy with fruit." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water every 10 days for mature plants. Active growth period. High heat can cause flower drop." },
-            { "season": "Monsoon", "care": "High risk of foot/root rot. Ensure no water stagnation. Earthing up (mounding soil at the base) is crucial." },
-            { "season": "Winter", "care": "Reduce watering to fortnightly. Protect from frost, as it is very sensitive. Growth slows significantly." }
-        ],
-        "chartData": [2, 1, 1],
-        "troubleshooting": [
-            { "symptom": "Base of the stem becomes soft, water-soaked, and black; plant topples over", "cause": "Foot rot or root rot, a fungal disease caused by waterlogged soil.", "solution": "Prevention is critical. Plant in well-drained soil on raised ground. 'Earthing up' helps water run off. Drenching the soil with a fungicide can help manage early-stage infection." },
-            { "symptom": "Mottled, distorted leaves and circular rings on the fruit", "cause": "Papaya Ring Spot Virus, a devastating disease spread by aphids. There is no cure.", "solution": "Control aphid populations with regular insecticide or neem oil sprays. Remove and destroy infected plants immediately to prevent spread." },
-            { "symptom": "Flowers or young fruit dropping off", "cause": "Environmental stress from temperatures that are too high or too low, or inconsistent watering.", "solution": "Ensure consistent watering during dry spells. In extreme heat, providing some afternoon shade with netting can help. Protect from frost in winter." }
-        ]
-    },
-    "Guava": {
-        "intro": "Guava care focuses on managing fruiting cycles (bahar treatment) and protecting the harvest from the pervasive fruit fly, especially during the monsoon.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water deeply, especially during dry periods.<br><strong>Fertilizing:</strong> Apply a balanced fertilizer and organic manure.<br><strong>Pest/Disease Control:</strong> Inspect for fruit flies, mealybugs, and scale.<br><strong>Pruning:</strong> Light pruning after harvesting to shape the tree." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Set up fruit fly traps if needed.<br><strong>Maintenance:</strong> Remove dead or diseased branches." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water deeply if no rain.<br><strong>Fertilizing:</strong> Apply organic compost around the base.<br><strong>Pest/Disease Control:</strong> Spray neem oil as a preventative measure.<br><strong>Maintenance:</strong> Check for branches needing support." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> General clean-up around the tree base." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water weekly for mature trees. Fertilize in mid-summer. Mulch to conserve moisture." },
-            { "season": "Monsoon", "care": "Main fruiting season for one crop. High risk of fruit fly. Ensure no waterlogging." },
-            { "season": "Winter", "care": "Reduce watering. Main harvest season for high-quality crop. Protect young plants from severe frost." }
-        ],
-        "chartData": [2, 2, 1],
-        "troubleshooting": [
-            { "symptom": "Small holes in fruit; cutting it open reveals white maggots", "cause": "Fruit fly infestation, a major pest for guava in India, especially during the monsoon season.", "solution": "Use pheromone traps to catch male flies. Bag individual fruits with paper covers when they are small. Collect and destroy all fallen and infested fruit." },
-            { "symptom": "White, cottony insects (mealybugs) or hard bumps (scale) on stems", "cause": "Common sap-sucking pests, often leading to sooty mold.", "solution": "Spray with neem oil or an appropriate insecticide. For heavy infestations, pruning affected branches can help." },
-            { "symptom": "Sunken, dark spots on leaves and fruit", "cause": "Anthracnose, a fungal disease.", "solution": "Improve air circulation through pruning. Spray with a copper-based fungicide." }
-        ]
-    },
-    "Thuja": {
-        "intro": "Thuja, or Morpankhi, is a resilient conifer, but its foliage is a clear indicator of its health, showing browning from issues ranging from winter burn to root rot.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water when top 1-2 inches of soil are dry.<br><strong>Fertilizing:</strong> Apply a balanced slow-release fertilizer in early spring.<br><strong>Pest/Disease Control:</strong> Inspect for bagworms, spider mites.<br><strong>Pruning:</strong> Prune to shape if grown as a hedge. Remove any brown/dead foliage." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Maintenance:</strong> General check-up." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water when topsoil is dry.<br><strong>Fertilizing:</strong> Apply organic fertilizer during the growing season.<br><strong>Pest/Disease Control:</strong> Spray with neem oil if pests are seen.<br><strong>Pruning:</strong> Annual trimming can be done to maintain shape." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> Tidy up around the base." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water thoroughly and consistently. Fertilize in June-July. May need temporary shading in extreme heat to prevent sunburn." },
-            { "season": "Monsoon", "care": "Reduce watering; ensure excellent drainage to prevent root rot. This is a good planting season." },
-            { "season": "Winter", "care": "Reduce watering significantly. Protect from harsh, drying winds. Some browning of foliage can be normal 'winter burn'." }
-        ],
-        "chartData": [2, 1, 1],
-        "troubleshooting": [
-            { "symptom": "Foliage turning brown", "cause": "Can be 'winter burn' from cold winds, underwatering in new plants, or root rot from waterlogged soil.", "solution": "Diagnose based on season and soil moisture. Protect with burlap in winter, ensure consistent water for new plants, and improve drainage if soil is soggy." }
-        ]
-    },
-    "Dumb Cane (Dieffenbachia)": {
-        "intro": "The Dumb Cane communicates its needs clearly, with its lower leaves turning yellow as the primary signal for almost any issue, most commonly incorrect watering.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water when top 2 inches of soil are dry.<br><strong>Fertilizing:</strong> Feed with a balanced, diluted liquid fertilizer.<br><strong>Pest/Disease Control:</strong> Inspect for spider mites. Wipe leaves with a damp cloth.<br><strong>Pruning:</strong> Prune away any yellowing or dead leaves." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Maintenance:</strong> Rotate the plant for even growth." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water when topsoil is dry.<br><strong>Fertilizing:</strong> Re-apply diluted liquid fertilizer.<br><strong>Pest/Disease Control:</strong> Follow up on any pest issues.<br><strong>Maintenance:</strong> Wipe leaves to keep them dust-free." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> General check-up." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water more frequently (e.g., weekly), keeping soil moist but not waterlogged. Fertilize every 4-6 weeks. Needs bright, indirect light." },
-            { "season": "Monsoon", "care": "High humidity is ideal. Ensure excellent drainage to prevent root rot." },
-            { "season": "Winter", "care": "Reduce watering (e.g., every 2 weeks) and stop fertilizing. Keep away from cold drafts." }
-        ],
-        "chartData": [3, 2, 1],
-        "troubleshooting": [
-            { "symptom": "Lower leaves turning yellow", "cause": "The most common signal. Can be overwatering (limp leaves, wet soil), underwatering (crispy leaves, dry soil), cold drafts, or a nutrient deficiency.", "solution": "Check soil moisture first to diagnose watering issues. If watering is correct, check for drafts from windows or AC vents. If all else is fine, feed with a balanced fertilizer." }
-        ]
-    },
-    "Portulaca": {
-        "intro": "As a succulent, the number one rule for Portulaca is to avoid overwatering. It thrives in conditions that would kill most other flowering plants: intense heat and dry soil.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water only when soil is completely dry.<br><strong>Fertilizing:</strong> Apply a few granules of a balanced fertilizer.<br><strong>Pest/Disease Control:</strong> Inspect for aphids.<br><strong>Pruning:</strong> Pinch off spent flowers (deadhead) to encourage more blooms." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil; likely does not need water.<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Maintenance:</strong> Continue deadheading." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water only when soil is completely dry.<br><strong>Fertilizing:</strong> A light feed can reinvigorate the plant mid-season.<br><strong>Pest/Disease Control:</strong> Check for aphids.<br><strong>Pruning:</strong> Pinch back leggy stems to make the plant bushier." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil; likely does not need water.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> Take cuttings to propagate for the next season." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Thrives in heat and full sun. Water sparingly even in heat. Needs 6-8 hours of direct sun for flowers to open." },
-            { "season": "Monsoon", "care": "Extremely high risk of root rot. Ensure sandy, well-draining soil and protect from heavy rain." },
-            { "season": "Winter", "care": "Stops blooming. Drastically reduce watering; excess water will kill it. Can be saved for next season via cuttings." }
-        ],
-        "chartData": [1, 0, 0],
-        "troubleshooting": [
-            { "symptom": "Mushy stems, plant collapsing", "cause": "Root and stem rot from overwatering.", "solution": "This is often fatal. Prevention is key. Use sandy soil with excellent drainage. In monsoon, move pots under cover. Water only when the soil is bone dry." },
-            { "symptom": "Flowers not opening", "cause": "Insufficient sunlight or cloudy/rainy days.", "solution": "Ensure the plant is in the sunniest spot possible. Flowers naturally close at night and on overcast days." }
-        ]
-    },
-    "Tulsi (in ground)": {
-        "intro": "Tulsi care is a year-round spiritual and horticultural practice, focusing on promoting leafy growth by pinching flowers and providing crucial protection from winter frost.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water when top inch of soil is dry.<br><strong>Fertilizing:</strong> Apply organic fertilizer like cow dung manure or compost.<br><strong>Pest/Disease Control:</strong> Inspect for small black bugs (aphids).<br><strong>Pruning:</strong> Pinch off flower buds (manjaris) to promote bushy leaf growth." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Maintenance:</strong> Continue pinching off flower buds." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water when topsoil is dry.<br><strong>Fertilizing:</strong> Re-apply organic fertilizer.<br><strong>Pest/Disease Control:</strong> Spray with neem oil if pests are seen.<br><strong>Pruning:</strong> Regularly prune top leaves to encourage side branches." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> Continue pinching off flower buds." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water almost daily, but check soil first. Requires 4-6 hours of sun." },
-            { "season": "Monsoon", "care": "Stop watering during rains. Ensure no waterlogging. Scrape the topsoil occasionally to aerate." },
-            { "season": "Winter", "care": "Reduce watering significantly. Water with lukewarm water. Cover with a cloth at night to protect from frost, which can be fatal." }
-        ],
-        "chartData": [3, 1, 1],
-        "troubleshooting": [
-            { "symptom": "Plant suddenly wilts and dies in winter", "cause": "Frost damage. Tulsi is very sensitive to cold.", "solution": "In frost-prone areas, cover the plant at night with a cloth or move potted plants to a sheltered area. Prune dead parts to see if it revives in spring." },
-            { "symptom": "Small black or green insects on stems", "cause": "Aphids.", "solution": "Spray with a solution of neem oil and mild soap. Repeat every few days until they are gone." }
-        ]
-    },
-    "Pudina (Mint, in ground)": {
-        "intro": "The main challenge with mint is not keeping it alive, but controlling its aggressive, invasive nature. It will quickly take over any space it's given.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Keep soil consistently moist; loves water.<br><strong>Fertilizing:</strong> Apply a light top dressing of compost.<br><strong>Pest/Disease Control:</strong> Inspect for pests.<br><strong>Pruning:</strong> Harvest regularly by trimming stems to encourage fresh, bushy growth." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Pest/Disease Control:</strong> Monitor for pests.<br><strong>Maintenance:</strong> Continue harvesting." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Keep soil moist.<br><strong>Pest/Disease Control:</strong> If infested, prune off affected parts; it will regrow quickly.<br><strong>Pruning:</strong> Prune the plant once every two months to prevent stunted growth." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil moisture.<br><strong>Fertilizing:</strong> Add compost once every 6 months.<br><strong>Pest/Disease Control:</strong> Final monthly check.<br><strong>Maintenance:</strong> Harvest before it flowers for best flavor." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water daily or every other day. In hot climates, partial shade is beneficial." },
-            { "season": "Monsoon", "care": "Reduce watering if it rains. Ensure good drainage. This is a good growing season." },
-            { "season": "Winter", "care": "Reduce watering. Growth will slow. In colder climates, provide full sun." }
-        ],
-        "chartData": [3, 2, 1],
-        "troubleshooting": [
-            { "symptom": "Plant is spreading uncontrollably", "cause": "This is the natural growth habit of mint, which spreads via underground runners.", "solution": "Grow it in pots or install underground barriers around the garden bed to contain it. Harvest frequently to keep it in check." },
-            { "symptom": "Orange spots on the undersides of leaves", "cause": "Mint rust, a fungal disease.", "solution": "Remove and destroy affected leaves. Ensure good air circulation and avoid overhead watering. It is difficult to eliminate completely." }
-        ]
-    },
-    "Aloe Vera": {
-        "intro": "The most common mistake in Aloe Vera care is overwatering, which leads to root rot. The soil must be allowed to dry out completely between waterings. It's a succulent that thrives on neglect.",
-        "weekly": [
-            { "title": "Week 1: Actions", "tasks": "<strong>Watering:</strong> Water deeply only when soil is completely dry.<br><strong>Fertilizing:</strong> Fertilize sparingly with a balanced formula at half-strength (only in growing season).<br><strong>Pest/Disease Control:</strong> Check for mealybugs at the base of leaves.<br><strong>Maintenance:</strong> Remove any brown, dried outer leaves." },
-            { "title": "Week 2: Observation", "tasks": "<strong>Watering:</strong> Check soil; likely does not need water.<br><strong>Maintenance:</strong> Harvest mature outer leaves for gel if desired." },
-            { "title": "Week 3: Follow-up", "tasks": "<strong>Watering:</strong> Water deeply only when soil is completely dry.<br><strong>Fertilizing:</strong> Re-apply diluted fertilizer if in active growing season.<br><strong>Pest/Disease Control:</strong> Check for signs of root rot (mushy base).<br><strong>Maintenance:</strong> Remove any pups (baby plants) for propagation." },
-            { "title": "Week 4: Prep", "tasks": "<strong>Watering:</strong> Check soil; likely does not need water.<br><strong>Pest/Disease Control:</strong> Final monthly check." }
-        ],
-        "seasonal": [
-            { "season": "Summer", "care": "Water every 2-3 weeks, but only when soil is bone dry. Fertilize once a month. Needs bright, indirect light. Direct hot sun can scorch leaves, turning them brown/red." },
-            { "season": "Monsoon", "care": "High risk of root rot. Keep in a spot with minimal rain exposure and ensure excellent drainage. Critical to avoid overwatering." },
-            { "season": "Winter", "care": "Reduce watering to once a month or less. Stop fertilizing. Plant is dormant." }
-        ],
-        "chartData": [1, 0, 0],
-        "troubleshooting": [
-            { "symptom": "Mushy, brown base and limp leaves", "cause": "Root rot from overwatering.", "solution": "Stop watering immediately. Remove from pot, trim away any black/mushy roots, and repot in fresh, dry, well-draining cactus/succulent soil. Water very sparingly." },
-            { "symptom": "Leaves turning brown or reddish", "cause": "Too much direct, harsh sunlight (sunburn).", "solution": "Move the plant to a location with bright but indirect light, such as behind a sheer curtain or on a porch with an overhang." },
-            { "symptom": "Thin, curled leaves", "cause": "Underwatering. While drought-tolerant, it does need water eventually.", "solution": "Give the plant a deep, thorough watering until water runs out the bottom. The leaves should plump up within a day or two." }
-        ]
-    }
-};
-
-const plantSelector = document.getElementById('plant-selector');
-const weeklyScheduleDiv = document.getElementById('weekly-schedule');
-const seasonalAdjustmentsDiv = document.getElementById('seasonal-adjustments');
-const troubleshootingGuideDiv = document.getElementById('troubleshooting-guide');
-const calendarPlantName = document.getElementById('calendar-plant-name');
-const profilePlantName = document.getElementById('profile-plant-name');
-const profileIntro = document.getElementById('profile-intro');
-
-const navCalendar = document.getElementById('nav-calendar');
-const navProfiles = document.getElementById('nav-profiles');
-const viewCalendar = document.getElementById('view-calendar');
-const viewProfiles = document.getElementById('view-profiles');
-
-const getProactiveTipBtn = document.getElementById('get-proactive-tip');
-const proactiveTipLoader = document.getElementById('proactive-tip-loader');
-const proactiveTipResult = document.getElementById('proactive-tip-result');
-
-const symptomInput = document.getElementById('symptom-input');
-const aiDiagnosisBtn = document.getElementById('ai-diagnosis-btn');
-const aiDiagnosisLoader = document.getElementById('ai-diagnosis-loader');
-const chatWindow = document.getElementById('chat-window');
-
-const imageUpload = document.getElementById('image-upload');
-const imagePreviewContainer = document.getElementById('image-preview-container');
-const imagePreview = document.getElementById('image-preview');
-const removeImageBtn = document.getElementById('remove-image-btn');
-const notificationBtn = document.getElementById('notification-btn');
-
-let seasonalChart;
-let uploadedImageData = null;
-let uploadedImageType = null;
-let chatHistory = [];
-
-async function callGemini(loaderElement) {
-    loaderElement.classList.remove('hidden');
-    
-    try {
-        const payload = { contents: chatHistory };
-        const apiKey = "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-        
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.json();
-            throw new Error(`API call failed with status: ${response.status}. ${errorBody.error.message}`);
+    const plantData = {
+        "Hydrangea macrophylla": {
+            "intro": "Blooms on 'old wood' from the previous season. The most common issue is a lack of flowers due to incorrect pruning.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water deeply if top 2 inches dry. Apply vermicompost. Inspect for aphids/fungus. Deadhead." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor for pests. General check-up." },
+                { "title": "Week 3", "tasks": "Water deeply if dry. Apply compost tea. Follow up on pests. Deadhead." },
+                { "title": "Week 4", "tasks": "Check soil moisture. Final pest check. Tidy plant base." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water 2-3 times/week. Needs afternoon shade. Prune lightly only after flowering ends." },
+                { "season": "Monsoon", "care": "Reduce watering. Ensure excellent drainage to prevent root rot. Improve air circulation." },
+                { "season": "Winter", "care": "Water only when dry. Stop fertilizing. Protect new buds from frost." }
+            ],
+            "chartData": [3, 1, 1],
+            "troubleshooting": [
+                { "symptom": "No blooms", "cause": "Pruning at the wrong time (spring); insufficient light; too much nitrogen.", "solution": "Only prune after flowering in late summer. Ensure morning sun. Use high Phosphorus (P) fertilizer." },
+                { "symptom": "Wilting leaves", "cause": "Underwatering or intense heat stress.", "solution": "Check soil; water if dry. If moist, provide more shade. Recovers in the evening." },
+                { "symptom": "Yellowing leaves", "cause": "Incorrect soil pH locking nutrients.", "solution": "Test soil pH. Add aluminium sulfate for blue flowers (acidic) or garden lime for pink (alkaline)." },
+                { "symptom": "Leaf spots", "cause": "Fungal disease, common in monsoon.", "solution": "Improve air circulation. Water soil, not leaves. Remove affected leaves. Use neem oil preventatively." }
+            ]
+        },
+        "Gardenia": {
+            "intro": "Known for its fragrant flowers and sensitivity to change. 'Bud drop' is a common sign of stress.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Keep soil moist. Apply vermicompost. Check for mealybugs. Prune lightly after flowering." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Watch for bud drop. Remove yellow leaves." },
+                { "title": "Week 3", "tasks": "Keep soil moist. Apply liquid fertilizer. Re-check for pests." },
+                { "title": "Week 4", "tasks": "Check soil moisture. Final pest check. Tidy up." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water well and mist leaves in dry heat. Fertilize every 2 weeks. Needs afternoon shade." },
+                { "season": "Monsoon", "care": "Reduce watering. Ensure excellent drainage. Watch for fungal issues." },
+                { "season": "Winter", "care": "Reduce water and fertilizer. Protect from frost." }
+            ],
+            "chartData": [3, 1, 1],
+            "troubleshooting": [
+                { "symptom": "Buds fall off", "cause": "Sudden changes in temperature, water, or light; pests.", "solution": "Provide a stable environment. Water consistently. Check buds for tiny pests." },
+                { "symptom": "Yellow leaves, green veins", "cause": "Iron deficiency due to alkaline soil.", "solution": "Use acidic fertilizer or chelated iron. Add used tea leaves to soil." }
+            ]
+        },
+        "Rose": {
+            "intro": "Requires proactive care against fungal diseases, especially black spot during the monsoon.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water at base when dry. Apply bone meal/neem cake. Check for black spot. Deadhead." },
+                { "title": "Week 2", "tasks": "Check soil. Apply liquid manure. Monitor for pests. Remove blind shoots." },
+                { "title": "Week 3", "tasks": "Water at base. Re-apply slow-release fertilizer. Re-check for fungus. Deadhead." },
+                { "title": "Week 4", "tasks": "Check soil. Apply liquid manure. Final pest check. Loosen topsoil." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water frequently. Provide afternoon shade. Watch for spider mites." },
+                { "season": "Monsoon", "care": "High risk of black spot & dieback. Water only when dry. Use fungicide weekly." },
+                { "season": "Winter", "care": "Reduce watering. Hard prune in Oct-Dec for best blooms. Apply manure after pruning." }
+            ],
+            "chartData": [3, 1, 1],
+            "troubleshooting": [
+                { "symptom": "Black spots on leaves", "cause": "Fungal disease from wet foliage.", "solution": "Remove infected leaves. Water at the base in the morning. Use preventative fungicide." },
+                { "symptom": "Stems dying from tip down", "cause": "Dieback fungus entering pruning cuts.", "solution": "Sterilize shears. Cut to healthy white pith. Seal large cuts with fungicide paste." }
+            ]
+        },
+        "Ixora": {
+            "intro": "Loves sun and needs acidic soil to thrive and produce its vibrant flower clusters.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Keep soil moist. Use acid-loving plant fertilizer. Check for aphids/scale. Deadhead." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Look for sooty mold, a sign of pests. Lightly shape if needed." },
+                { "title": "Week 3", "tasks": "Keep soil moist. Re-apply liquid fertilizer. Re-check for pests. Deadhead." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. Tidy up." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water regularly. Fertilize every 4-6 weeks. Needs 6-8 hours of sun for good blooms." },
+                { "season": "Monsoon", "care": "Ensure excellent drainage. Good time to take cuttings. Watch for fungus on wet leaves." },
+                { "season": "Winter", "care": "Reduce watering and stop fertilizing. Protect from frost." }
+            ],
+            "chartData": [3, 1, 1],
+            "troubleshooting": [
+                { "symptom": "Few flowers", "cause": "Not enough sunlight.", "solution": "Move to the sunniest possible location (6-8 hours of direct sun)." },
+                { "symptom": "Yellow leaves", "cause": "Soil is too alkaline, causing iron deficiency.", "solution": "Use acidic potting mix and fertilizer. Avoid planting near concrete." }
+            ]
+        },
+        "Maiden Kamini (Orange Jasmine)": {
+            "intro": "Fragrant flowers often appear after rain. Sensitive to overwatering.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water when top inch is dry. Apply balanced fertilizer. Check for mealybugs. Prune after flowering." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor for pests. Remove yellow leaves." },
+                { "title": "Week 3", "tasks": "Water when dry. Re-apply liquid fertilizer. Follow up on pests." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. Tidy up." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Fertilize every 4-6 weeks. Needs morning sun." },
+                { "season": "Monsoon", "care": "Reduce watering. Ensure excellent drainage to prevent root rot." },
+                { "season": "Winter", "care": "Reduce water and fertilizer significantly." }
+            ],
+            "chartData": [3, 2, 1],
+            "troubleshooting": [
+                { "symptom": "Yellowing leaves", "cause": "Overwatering or poor drainage.", "solution": "Let topsoil dry out between waterings. Ensure good drainage." },
+                { "symptom": "White cottony masses", "cause": "Mealybugs.", "solution": "Treat with neem oil or insecticidal soap." }
+            ]
+        },
+        "Crape Jasmine": {
+            "intro": "A hardy, reliable bloomer. Yellowing leaves are the most common sign it needs a nutritional boost.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water when topsoil is slightly dry. Apply balanced fertilizer. Check for aphids." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor for pests. General check-up." },
+                { "title": "Week 3", "tasks": "Water when slightly dry. Apply organic compost. Follow up on pests." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. Tidy up." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water regularly. Prune after flowering in late summer. Appreciates afternoon shade." },
+                { "season": "Monsoon", "care": "Thrives in this season. Ensure good drainage. Watch for leaf spot." },
+                { "season": "Winter", "care": "Reduce watering and stop fertilizing. Protect from frost." }
+            ],
+            "chartData": [3, 3, 1],
+            "troubleshooting": [
+                { "symptom": "Yellowing leaves", "cause": "Nutrient deficiency, often nitrogen.", "solution": "Apply a balanced fertilizer during the growing season." },
+                { "symptom": "Pests on new growth", "cause": "Whiteflies and caterpillars.", "solution": "Manage with regular neem oil sprays." }
+            ]
+        },
+        "Croton plant": {
+            "intro": "Known for its dramatic reaction to change. Sudden leaf drop is often a sign of shock, not disease.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water when top 2 inches dry. Apply diluted liquid fertilizer. Check for spider mites. Wipe leaves." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor pests on leaf undersides. Rotate plant." },
+                { "title": "Week 3", "tasks": "Water when dry. Re-apply diluted fertilizer. Wipe leaves to keep dust-free." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. General check-up." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water more frequently. Fertilize monthly. Needs bright, indirect light to maintain color." },
+                { "season": "Monsoon", "care": "Loves high humidity. Ensure excellent drainage to prevent root rot." },
+                { "season": "Winter", "care": "Reduce watering and stop fertilizing. Protect from cold drafts." }
+            ],
+            "chartData": [3, 2, 1],
+            "troubleshooting": [
+                { "symptom": "Sudden leaf drop", "cause": "Shock from a change in location, temperature, or watering.", "solution": "Provide a stable environment and consistent care. It will recover." },
+                { "symptom": "Colors fading to green", "cause": "Not enough light.", "solution": "Move to a location with 6-8 hours of bright, indirect sunlight." }
+            ]
+        },
+        "Marigold": {
+            "intro": "A cheerful annual. Its biggest enemy in the Indian climate is root rot during the monsoon.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water when top inch is dry. Apply slow-release fertilizer. Check for aphids. Deadhead." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor pests. Continue deadheading." },
+                { "title": "Week 3", "tasks": "Water when dry. Re-apply fertilizer. Pinch young plants to make them bushy." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. Continue deadheading." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water frequently in high heat. Thrives in full sun, which is essential for blooms." },
+                { "season": "Monsoon", "care": "High risk of root rot. Ensure excellent drainage and avoid overhead watering." },
+                { "season": "Winter", "care": "Reduce watering. Most annual varieties will complete their life cycle." }
+            ],
+            "chartData": [2, 1, 1],
+            "troubleshooting": [
+                { "symptom": "Mushy, wilting base", "cause": "Root rot from overwatering.", "solution": "Prevention is key. Use well-draining soil and pots with large drainage holes." },
+                { "symptom": "Few or no blooms", "cause": "Not enough sun or too much nitrogen fertilizer.", "solution": "Ensure at least 6 hours of direct sun. Use a high-phosphorus (P) fertilizer." }
+            ]
+        },
+        "Red Lady Papaya": {
+            "intro": "Care is a balance between providing enough water for fruit and preventing fatal root rot.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water deeply but infrequently. Apply balanced fertilizer. Check for ring spot virus." },
+                { "title": "Week 2", "tasks": "Check soil. Apply micronutrients (Zinc, Boron) as a foliar spray. Monitor for aphids." },
+                { "title": "Week 3", "tasks": "Water deeply. Re-apply balanced fertilizer. Use fungicide if foot rot is a concern." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. Support trunk if heavy with fruit." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water every 10 days. High heat can cause flower drop." },
+                { "season": "Monsoon", "care": "High risk of root rot. Ensure no water stagnation. Mound soil at the base." },
+                { "season": "Winter", "care": "Reduce watering. Protect from frost. Growth slows." }
+            ],
+            "chartData": [2, 1, 1],
+            "troubleshooting": [
+                { "symptom": "Soft, black base; plant topples", "cause": "Foot rot from waterlogged soil.", "solution": "Prevention is key. Plant on raised ground. Drench soil with fungicide in early stages." },
+                { "symptom": "Mottled leaves, rings on fruit", "cause": "Papaya Ring Spot Virus (spread by aphids). No cure.", "solution": "Control aphids. Remove and destroy infected plants immediately." }
+            ]
+        },
+        "Guava": {
+            "intro": "Focus on managing fruiting cycles and protecting the harvest from fruit flies, especially in monsoon.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water deeply in dry periods. Apply balanced fertilizer. Check for fruit flies." },
+                { "title": "Week 2", "tasks": "Check soil. Set up fruit fly traps if needed. Remove dead branches." },
+                { "title": "Week 3", "tasks": "Water deeply if no rain. Apply compost. Spray neem oil preventatively." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. Clean up around tree base." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water weekly. Fertilize mid-summer. Mulch to conserve moisture." },
+                { "season": "Monsoon", "care": "Main fruiting season. High risk of fruit fly. Ensure no waterlogging." },
+                { "season": "Winter", "care": "Reduce watering. Main harvest season for high-quality crop. Protect young plants from frost." }
+            ],
+            "chartData": [2, 2, 1],
+            "troubleshooting": [
+                { "symptom": "Maggots inside fruit", "cause": "Fruit fly infestation.", "solution": "Use pheromone traps. Bag individual fruits when small. Destroy all fallen fruit." },
+                { "symptom": "White cottony insects on stems", "cause": "Mealybugs.", "solution": "Spray with neem oil or appropriate insecticide." }
+            ]
+        },
+        "Thuja": {
+            "intro": "A resilient conifer, but its foliage is a clear indicator of its health, browning from issues like winter burn or root rot.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water when top 1-2 inches dry. Fertilize in early spring. Check for bagworms. Prune to shape." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor for pests. General check-up." },
+                { "title": "Week 3", "tasks": "Water when dry. Apply organic fertilizer during growing season. Check for spider mites." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. Tidy up base." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water consistently. May need shade in extreme heat." },
+                { "season": "Monsoon", "care": "Reduce watering. Ensure excellent drainage to prevent root rot." },
+                { "season": "Winter", "care": "Reduce watering significantly. Protect from harsh, drying winds." }
+            ],
+            "chartData": [2, 1, 1],
+            "troubleshooting": [
+                { "symptom": "Foliage turning brown", "cause": "Winter burn, underwatering, or root rot.", "solution": "Diagnose based on season and soil moisture. Protect in winter, water new plants consistently, improve drainage if soggy." }
+            ]
+        },
+        "Dumb Cane (Dieffenbachia)": {
+            "intro": "Its lower leaves turning yellow is the primary signal for almost any issue, most commonly incorrect watering.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water when top 2 inches dry. Feed with diluted liquid fertilizer. Check for spider mites. Wipe leaves." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor pests. Rotate plant for even growth." },
+                { "title": "Week 3", "tasks": "Water when dry. Re-apply diluted fertilizer. Wipe leaves to keep dust-free." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. General check-up." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water more frequently. Fertilize every 4-6 weeks. Needs bright, indirect light." },
+                { "season": "Monsoon", "care": "Loves high humidity. Ensure excellent drainage to prevent root rot." },
+                { "season": "Winter", "care": "Reduce watering and stop fertilizing. Keep away from cold drafts." }
+            ],
+            "chartData": [3, 2, 1],
+            "troubleshooting": [
+                { "symptom": "Lower leaves turning yellow", "cause": "Overwatering (limp leaves), underwatering (crispy leaves), or cold drafts.", "solution": "Check soil moisture first. If watering is correct, check for drafts. If all else is fine, fertilize." }
+            ]
+        },
+        "Portulaca": {
+            "intro": "A succulent that thrives in conditions that would kill most other plants: intense heat and dry soil.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water only when soil is completely dry. Apply a few granules of balanced fertilizer. Deadhead." },
+                { "title": "Week 2", "tasks": "Check soil; likely no water needed. Continue deadheading." },
+                { "title": "Week 3", "tasks": "Water only if bone dry. A light feed can reinvigorate. Pinch back leggy stems." },
+                { "title": "Week 4", "tasks": "Check soil. Take cuttings to propagate for next season." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Thrives in heat and full sun. Water sparingly. Needs 6-8 hours of direct sun for flowers to open." },
+                { "season": "Monsoon", "care": "Extremely high risk of root rot. Protect from heavy rain." },
+                { "season": "Winter", "care": "Stops blooming. Drastically reduce watering. Will likely die back." }
+            ],
+            "chartData": [1, 0, 0],
+            "troubleshooting": [
+                { "symptom": "Mushy stems, plant collapsing", "cause": "Root rot from overwatering.", "solution": "Often fatal. Prevention is key. Use sandy soil and protect from rain." },
+                { "symptom": "Flowers not opening", "cause": "Not enough sunlight or cloudy days.", "solution": "Move to the sunniest spot possible. Flowers close at night." }
+            ]
+        },
+        "Tulsi (in ground)": {
+            "intro": "Focus on promoting leafy growth by pinching flowers and providing crucial protection from winter frost.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water when top inch dry. Apply organic manure. Check for aphids. Pinch off flower buds (manjaris)." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor pests. Continue pinching flower buds." },
+                { "title": "Week 3", "tasks": "Water when dry. Re-apply manure. Prune top leaves to encourage side branches." },
+                { "title": "Week 4", "tasks": "Check soil. Final pest check. Continue pinching flower buds." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water almost daily, but check soil first. Needs 4-6 hours of sun." },
+                { "season": "Monsoon", "care": "Stop watering during rains. Ensure no waterlogging. Aerate topsoil." },
+                { "season": "Winter", "care": "Reduce watering. Cover at night to protect from frost, which can be fatal." }
+            ],
+            "chartData": [3, 1, 1],
+            "troubleshooting": [
+                { "symptom": "Plant dies suddenly in winter", "cause": "Frost damage.", "solution": "Cover the plant at night with a cloth in frost-prone areas." },
+                { "symptom": "Small black insects on stems", "cause": "Aphids.", "solution": "Spray with a solution of neem oil and mild soap." }
+            ]
+        },
+        "Pudina (Mint, in ground)": {
+            "intro": "The main challenge with mint is not keeping it alive, but controlling its aggressive, invasive nature.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Keep soil consistently moist. Apply compost. Harvest regularly by trimming stems." },
+                { "title": "Week 2", "tasks": "Check soil moisture. Monitor pests. Continue harvesting." },
+                { "title": "Week 3", "tasks": "Keep soil moist. Prune affected parts if infested; it will regrow." },
+                { "title": "Week 4", "tasks": "Check soil. Harvest before it flowers for best flavor." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water daily or every other day. Partial shade is beneficial in hot climates." },
+                { "season": "Monsoon", "care": "Thrives, but ensure good drainage. Spreads rapidly." },
+                { "season": "Winter", "care": "Reduce watering. Growth will slow down significantly." }
+            ],
+            "chartData": [3, 2, 1],
+            "troubleshooting": [
+                { "symptom": "Spreading uncontrollably", "cause": "Natural growth habit via underground runners.", "solution": "Grow in pots or use underground barriers to contain it." },
+                { "symptom": "Orange spots on leaf undersides", "cause": "Mint rust, a fungal disease.", "solution": "Remove affected leaves. Ensure good air circulation." }
+            ]
+        },
+        "Aloe Vera": {
+            "intro": "A succulent that thrives on neglect. The most common mistake is overwatering.",
+            "weekly": [
+                { "title": "Week 1", "tasks": "Water deeply only when soil is completely dry. Fertilize sparingly in growing season. Check for mealybugs." },
+                { "title": "Week 2", "tasks": "Check soil; likely no water needed. Harvest mature outer leaves if desired." },
+                { "title": "Week 3", "tasks": "Water only if bone dry. Check for root rot (mushy base). Remove pups for propagation." },
+                { "title": "Week 4", "tasks": "Check soil; likely no water needed. Final pest check." }
+            ],
+            "seasonal": [
+                { "season": "Summer", "care": "Water every 2-3 weeks when soil is bone dry. Needs bright, indirect light." },
+                { "season": "Monsoon", "care": "High risk of root rot. Protect from rain. Do not overwater." },
+                { "season": "Winter", "care": "Reduce watering to once a month or less. Stop fertilizing." }
+            ],
+            "chartData": [1, 0, 0],
+            "troubleshooting": [
+                { "symptom": "Mushy, brown base", "cause": "Root rot from overwatering.", "solution": "Stop watering. Repot in dry, well-draining cactus soil, trimming away any mushy roots." },
+                { "symptom": "Leaves turning brown/reddish", "cause": "Too much direct, harsh sunlight.", "solution": "Move to a location with bright but indirect light." }
+            ]
         }
+    };
 
-        const result = await response.json();
+    const allPlantNames = Object.keys(plantData);
+
+    const plantSearch = document.getElementById('plant-search');
+    const plantSearchResults = document.getElementById('plant-search-results');
+    const weeklyScheduleDiv = document.getElementById('weekly-schedule');
+    const seasonalAdjustmentsDiv = document.getElementById('seasonal-adjustments');
+    const troubleshootingGuideDiv = document.getElementById('troubleshooting-guide');
+    const calendarPlantName = document.getElementById('calendar-plant-name');
+    const profilePlantName = document.getElementById('profile-plant-name');
+    const profileIntro = document.getElementById('profile-intro');
+    const generationOverlay = document.getElementById('generation-overlay');
+    const generationText = document.getElementById('generation-text');
+
+    const navCalendar = document.getElementById('nav-calendar');
+    const navProfiles = document.getElementById('nav-profiles');
+    const viewCalendar = document.getElementById('view-calendar');
+    const viewProfiles = document.getElementById('view-profiles');
+
+    const getProactiveTipBtn = document.getElementById('get-proactive-tip');
+    const proactiveTipLoader = document.getElementById('proactive-tip-loader');
+    const proactiveTipResult = document.getElementById('proactive-tip-result');
+
+    const symptomInput = document.getElementById('symptom-input');
+    const aiDiagnosisBtn = document.getElementById('ai-diagnosis-btn');
+    const aiDiagnosisLoader = document.getElementById('ai-diagnosis-loader');
+    const chatWindow = document.getElementById('chat-window');
+
+    const imageUpload = document.getElementById('image-upload');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const removeImageBtn = document.getElementById('remove-image-btn');
+    const notificationBtn = document.getElementById('notification-btn');
+    const speechBtn = document.getElementById('speech-btn');
+
+
+    let seasonalChart;
+    let uploadedImageData = null;
+    let uploadedImageType = null;
+    let chatHistory = [];
+    let currentPlant = '';
+
+    async function callGemini(loaderElement) {
+        loaderElement.classList.remove('hidden');
         
-        if (result.candidates && result.candidates.length > 0 &&
-            result.candidates[0].content && result.candidates[0].content.parts &&
-            result.candidates[0].content.parts.length > 0) {
-            const text = result.candidates[0].content.parts[0].text;
-            chatHistory.push({ role: "model", parts: [{ text }] });
-            displayChatHistory();
-        } else {
-            const errorText = 'The AI returned an empty response. This might be due to safety settings or an issue with the prompt. Please try rephrasing.';
+        try {
+            const payload = { contents: chatHistory };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(`API call failed with status: ${response.status}. ${errorBody.error.message}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                let text = result.candidates[0].content.parts[0].text;
+                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                chatHistory.push({ role: "model", parts: [{ text }] });
+                displayChatHistory();
+            } else {
+                const errorText = 'The AI returned an empty response. This might be due to safety settings or an issue with the prompt. Please try rephrasing.';
+                chatHistory.push({ role: "model", parts: [{ text: errorText }] });
+                displayChatHistory();
+            }
+
+        } catch (error) {
+            const errorText = `An error occurred: ${error.message}. Please check your API key and network connection.`;
             chatHistory.push({ role: "model", parts: [{ text: errorText }] });
             displayChatHistory();
+            console.error('Gemini API Error:', error);
+        } finally {
+            loaderElement.classList.add('hidden');
         }
+    }
 
-    } catch (error) {
-        const errorText = `An error occurred: ${error.message}. Please check your API key and network connection.`;
-        chatHistory.push({ role: "model", parts: [{ text: errorText }] });
+    function displayChatHistory() {
+        chatWindow.innerHTML = '';
+        chatHistory.forEach((message, index) => {
+            const bubbleWrapper = document.createElement('div');
+            bubbleWrapper.classList.add('flex', 'items-end', 'space-x-2');
+
+            const bubble = document.createElement('div');
+            bubble.classList.add('p-3', 'rounded-lg', 'max-w-md', 'break-words');
+            
+            let content = '';
+            message.parts.forEach(part => {
+                if (part.text) {
+                    content += part.text.replace(/\n/g, '<br>');
+                }
+                if (part.inlineData) {
+                    content += `<img src="data:${part.inlineData.mimeType};base64,${part.inlineData.data}" class="max-h-32 rounded-lg mt-2">`;
+                }
+            });
+            bubble.innerHTML = content;
+
+            if (message.role === 'user') {
+                bubble.classList.add('chat-bubble-user');
+                bubbleWrapper.classList.add('justify-end');
+
+                const editBtn = document.createElement('button');
+                editBtn.innerHTML = '✏️';
+                editBtn.classList.add('text-xs', 'p-1', 'hover:bg-gray-300', 'rounded-full', 'opacity-50', 'hover:opacity-100');
+                editBtn.title = 'Edit Prompt';
+                editBtn.onclick = () => editPrompt(index);
+
+                bubbleWrapper.appendChild(bubble);
+                bubbleWrapper.appendChild(editBtn);
+            } else {
+                bubble.classList.add('chat-bubble-model');
+                bubbleWrapper.appendChild(bubble);
+            }
+            chatWindow.appendChild(bubbleWrapper);
+        });
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        chatWindow.classList.remove('hidden');
+    }
+
+    function editPrompt(index) {
+        const userMessage = chatHistory[index];
+        const textPart = userMessage.parts.find(p => p.text);
+        if (textPart) {
+            symptomInput.value = textPart.text.replace(/My .*? has these symptoms: "(.*)"\..*/s, '$1');
+        }
+        
+        chatHistory.splice(index); 
         displayChatHistory();
-        console.error('Gemini API Error:', error);
-    } finally {
-        loaderElement.classList.add('hidden');
+        symptomInput.focus();
     }
-}
 
-function displayChatHistory() {
-    chatWindow.innerHTML = '';
-    chatHistory.forEach(message => {
-        const bubble = document.createElement('div');
-        bubble.classList.add('p-3', 'rounded-lg', 'max-w-md', 'break-words');
+
+    function getCurrentIndianSeason() {
+        const month = new Date().getMonth(); 
+        if (month >= 2 && month <= 5) return 'Summer'; 
+        if (month >= 6 && month <= 8) return 'Monsoon'; 
+        return 'Winter'; 
+    }
+
+    getProactiveTipBtn.addEventListener('click', async () => {
+        proactiveTipLoader.classList.remove('hidden');
+        proactiveTipResult.classList.add('hidden');
+        const selectedPlant = currentPlant;
+        const currentSeason = getCurrentIndianSeason();
+        const prompt = `Provide a single, highly specific, proactive care tip for a ${selectedPlant} plant during the ${currentSeason} season in the Indian climate. The tip should be concise and actionable.`;
         
-        let content = '';
-        message.parts.forEach(part => {
-            if (part.text) {
-                content += part.text.replace(/\n/g, '<br>');
-            }
-            if (part.inlineData) {
-                content += `<img src="data:${part.inlineData.mimeType};base64,${part.inlineData.data}" class="max-h-32 rounded-lg mt-2">`;
-            }
-        });
-        bubble.innerHTML = content;
-
-        if (message.role === 'user') {
-            bubble.classList.add('chat-bubble-user');
-        } else {
-            bubble.classList.add('chat-bubble-model');
+        try {
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('API Error');
+            const result = await response.json();
+            const text = result.candidates[0].content.parts[0].text;
+            proactiveTipResult.innerHTML = text.replace(/\n/g, '<br>');
+        } catch (e) {
+            proactiveTipResult.textContent = 'Could not fetch a tip at this time.';
+        } finally {
+            proactiveTipLoader.classList.add('hidden');
+            proactiveTipResult.classList.remove('hidden');
         }
-        chatWindow.appendChild(bubble);
     });
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-    chatWindow.classList.remove('hidden');
-}
 
+    function sendToAIDoctor() {
+        const symptoms = symptomInput.value;
+        if (!symptoms.trim() && !uploadedImageData) {
+            alert('Please describe the symptoms or upload an image first.');
+            return;
+        }
+        
+        const parts = [];
+        const fullPrompt = `My ${currentPlant} has these symptoms: "${symptoms}". Please analyze the text and image. Format your response with clear headings using "**" for bolding, like "**Diagnosis:**", "**Cause:**", and "**Solution:**".`;
+        
+        parts.push({ text: fullPrompt });
 
-function getCurrentIndianSeason() {
-    const month = new Date().getMonth(); // 0 = January, 11 = December
-    if (month >= 2 && month <= 5) return 'Summer'; // March to June
-    if (month >= 6 && month <= 8) return 'Monsoon'; // July to September
-    return 'Winter'; // October to February
-}
+        if (uploadedImageData) {
+            parts.push({ inlineData: { mimeType: uploadedImageType, data: uploadedImageData } });
+        }
 
-getProactiveTipBtn.addEventListener('click', async () => {
-    proactiveTipLoader.classList.remove('hidden');
-    proactiveTipResult.classList.add('hidden');
-    const selectedPlant = plantSelector.value;
-    const currentSeason = getCurrentIndianSeason();
-    const prompt = `Provide a single, highly specific, proactive care tip for a ${selectedPlant} plant during the ${currentSeason} season in the Indian climate. The tip should be concise and actionable.`;
-    
-    try {
-        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-        const apiKey = "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) throw new Error('API Error');
-        const result = await response.json();
-        const text = result.candidates[0].content.parts[0].text;
-        proactiveTipResult.innerHTML = text.replace(/\n/g, '<br>');
-    } catch (e) {
-        proactiveTipResult.textContent = 'Could not fetch a tip at this time.';
-    } finally {
-        proactiveTipLoader.classList.add('hidden');
-        proactiveTipResult.classList.remove('hidden');
-    }
-});
+        chatHistory.push({ role: 'user', parts: [{text: symptoms}, ...parts.slice(1)] });
+        displayChatHistory();
+        callGemini(aiDiagnosisLoader);
 
-aiDiagnosisBtn.addEventListener('click', () => {
-    const symptoms = symptomInput.value;
-    if (!symptoms.trim() && !uploadedImageData) {
-        alert('Please describe the symptoms or upload an image first.');
-        return;
-    }
-    
-    const parts = [];
-    if (symptoms.trim()) {
-        parts.push({ text: `My ${plantSelector.value} has these symptoms: ${symptoms}` });
-    }
-    if (uploadedImageData) {
-        parts.push({ inlineData: { mimeType: uploadedImageType, data: uploadedImageData } });
+        symptomInput.value = '';
+        removeImageBtn.click();
     }
 
-    chatHistory.push({ role: 'user', parts });
-    displayChatHistory();
-    callGemini(aiDiagnosisLoader);
+    aiDiagnosisBtn.addEventListener('click', sendToAIDoctor);
 
-    symptomInput.value = '';
-    removeImageBtn.click();
-});
-
-imageUpload.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imagePreview.src = e.target.result;
-            imagePreviewContainer.classList.remove('hidden');
-            const resultParts = e.target.result.split(',');
-            uploadedImageData = resultParts[1];
-            uploadedImageType = resultParts[0].split(':')[1].split(';')[0];
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-removeImageBtn.addEventListener('click', () => {
-    imageUpload.value = '';
-    imagePreview.src = '';
-    imagePreviewContainer.classList.add('hidden');
-    uploadedImageData = null;
-    uploadedImageType = null;
-});
-
-
-function populatePlantSelector() {
-    const plants = Object.keys(plantData);
-    plants.sort(); 
-    plants.forEach(plant => {
-        const option = document.createElement('option');
-        option.value = plant;
-        option.textContent = plant;
-        plantSelector.appendChild(option);
+    symptomInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendToAIDoctor();
+        }
     });
-}
 
-function updateContent(plantName) {
-    const data = plantData[plantName];
-    if (!data) return;
 
-    calendarPlantName.textContent = plantName;
-    profilePlantName.textContent = plantName;
-    profileIntro.textContent = data.intro;
+    imageUpload.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.classList.remove('hidden');
+                const resultParts = e.target.result.split(',');
+                uploadedImageData = resultParts[1];
+                uploadedImageType = resultParts[0].split(':')[1].split(';')[0];
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
-    weeklyScheduleDiv.innerHTML = data.weekly.map(week => `
-        <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-            <h4 class="font-bold text-lg mb-2 text-[#6B8A7A]">${week.title}</h4>
-            <p class="text-sm">${week.tasks}</p>
-        </div>
-    `).join('');
+    removeImageBtn.addEventListener('click', () => {
+        imageUpload.value = '';
+        imagePreview.src = '';
+        imagePreviewContainer.classList.add('hidden');
+        uploadedImageData = null;
+        uploadedImageType = null;
+    });
 
-    seasonalAdjustmentsDiv.innerHTML = data.seasonal.map(season => `
-        <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-            <h4 class="font-bold text-lg mb-2 text-amber-700">${season.season}</h4>
-            <p class="text-sm">${season.care}</p>
-        </div>
-    `).join('');
 
-    troubleshootingGuideDiv.innerHTML = data.troubleshooting.map((item, index) => `
-        <div class="border border-gray-200 rounded-lg">
-            <button class="accordion-button w-full text-left p-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 focus:outline-none" data-index="${index}">
-                <span class="font-semibold">${item.symptom}</span>
-                <span class="accordion-arrow text-xl transform">↓</span>
-            </button>
-            <div class="accordion-content bg-white p-4 border-t border-gray-200">
-                <p class="mb-2"><strong>Possible Causes:</strong> ${item.cause}</p>
-                <p><strong>Solution:</strong> ${item.solution}</p>
+    async function updateContent(plantName) {
+        currentPlant = plantName;
+        
+        if (plantData[plantName]) {
+            displayPlantData(plantName, plantData[plantName]);
+            return;
+        }
+        
+        alert(`Care guide for "${plantName}" is not available in the built-in database.`);
+    }
+
+    function displayPlantData(plantName, data) {
+        calendarPlantName.textContent = plantName;
+        profilePlantName.textContent = plantName;
+        profileIntro.textContent = data.intro;
+
+        weeklyScheduleDiv.innerHTML = data.weekly.map(week => `
+            <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                <h4 class="font-bold text-lg mb-2 text-[#6B8A7A]">${week.title}</h4>
+                <p class="text-sm">${week.tasks}</p>
             </div>
-        </div>
-    `).join('');
+        `).join('');
 
-    updateChart(plantName);
-    chatHistory = [];
-    chatWindow.innerHTML = '';
-    chatWindow.classList.add('hidden');
-}
+        seasonalAdjustmentsDiv.innerHTML = data.seasonal.map(season => `
+            <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                <h4 class="font-bold text-lg mb-2 text-amber-700">${season.season}</h4>
+                <p class="text-sm">${season.care}</p>
+            </div>
+        `).join('');
 
-function updateChart(plantName) {
-    const data = plantData[plantName];
-    if (!data) return;
+        troubleshootingGuideDiv.innerHTML = data.troubleshooting.map((item) => `
+            <div class="border border-gray-200 rounded-lg">
+                <button class="accordion-button w-full text-left p-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 focus:outline-none">
+                    <span class="font-semibold">${item.symptom}</span>
+                    <span class="accordion-arrow text-xl transform">↓</span>
+                </button>
+                <div class="accordion-content bg-white p-4 border-t border-gray-200">
+                    <p class="mb-2"><strong>Possible Causes:</strong> ${item.cause}</p>
+                    <p><strong>Solution:</strong> ${item.solution}</p>
+                </div>
+            </div>
+        `).join('');
 
-    const ctx = document.getElementById('seasonalChart').getContext('2d');
-    
-    if (seasonalChart) {
-        seasonalChart.destroy();
+        updateChart(plantName);
+        chatHistory = [];
+        chatWindow.innerHTML = '';
+        chatWindow.classList.add('hidden');
     }
 
-    seasonalChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Summer', 'Monsoon', 'Winter'],
-            datasets: [{
-                label: 'Care Intensity (Watering)',
-                data: data.chartData,
-                backgroundColor: [
-                    'rgba(255, 159, 64, 0.6)',
-                    'rgba(54, 162, 235, 0.6)',
-                    'rgba(201, 203, 207, 0.6)'
-                ],
-                borderColor: [
-                    'rgba(255, 159, 64, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(201, 203, 207, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 4,
-                    ticks: {
-                        stepSize: 1,
-                        callback: function(value) {
-                            const labels = ['None', 'Low', 'Medium', 'High'];
-                            return labels[value];
-                        }
-                    }
-                }
+    function updateChart(plantName) {
+        const data = plantData[plantName];
+        if (!data) return;
+
+        const ctx = document.getElementById('seasonalChart').getContext('2d');
+        
+        if (seasonalChart) {
+            seasonalChart.destroy();
+        }
+
+        seasonalChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Summer', 'Monsoon', 'Winter'],
+                datasets: [{
+                    label: 'Care Intensity (Watering)',
+                    data: data.chartData,
+                    backgroundColor: [
+                        'rgba(255, 159, 64, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(201, 203, 207, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(201, 203, 207, 1)'
+                    ],
+                    borderWidth: 1
+                }]
             },
-            plugins: {
-                legend: {
-                    display: false
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 4,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                const labels = ['None', 'Low', 'Medium', 'High'];
+                                return labels[value];
+                            }
+                        }
+                    }
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                const labels = ['None', 'Low', 'Medium', 'High'];
+                                if (context.parsed.y !== null) {
+                                    label += labels[context.parsed.y];
+                                }
+                                return label;
                             }
-                            const labels = ['None', 'Low', 'Medium', 'High'];
-                            if (context.parsed.y !== null) {
-                                label += labels[context.parsed.y];
-                            }
-                            return label;
                         }
                     }
                 }
+            }
+        });
+    }
+
+
+    plantSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        plantSearchResults.innerHTML = '';
+        if (searchTerm) {
+            const filteredPlants = allPlantNames.filter(plant => plant.toLowerCase().includes(searchTerm));
+            if (filteredPlants.length > 0) {
+                filteredPlants.forEach(plant => {
+                    const item = document.createElement('div');
+                    item.textContent = plant;
+                    item.classList.add('p-2', 'cursor-pointer', 'hover:bg-gray-100');
+                    item.onclick = () => {
+                        plantSearch.value = plant;
+                        plantSearchResults.classList.add('hidden');
+                        updateContent(plant);
+                    };
+                    plantSearchResults.appendChild(item);
+                });
+                plantSearchResults.classList.remove('hidden');
+            } else {
+                plantSearchResults.classList.add('hidden');
+            }
+        } else {
+            plantSearchResults.classList.add('hidden');
+        }
+    });
+
+    plantSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const searchTerm = e.target.value;
+            plantSearchResults.classList.add('hidden');
+            updateContent(searchTerm);
+        }
+    });
+
+
+    document.addEventListener('click', (e) => {
+        if (!plantSearch.contains(e.target)) {
+            plantSearchResults.classList.add('hidden');
+        }
+    });
+
+
+    navCalendar.addEventListener('click', () => {
+        viewCalendar.classList.remove('hidden');
+        viewProfiles.classList.add('hidden');
+        navCalendar.classList.add('active');
+        navProfiles.classList.remove('active');
+    });
+
+    navProfiles.addEventListener('click', () => {
+        viewCalendar.classList.add('hidden');
+        viewProfiles.classList.remove('hidden');
+        navCalendar.classList.remove('active');
+        navProfiles.classList.add('active');
+    });
+
+    troubleshootingGuideDiv.addEventListener('click', function(e) {
+        const button = e.target.closest('.accordion-button');
+        if (button) {
+            button.classList.toggle('open');
+            const content = button.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
             }
         }
     });
-}
 
-
-plantSelector.addEventListener('change', (e) => {
-    updateContent(e.target.value);
-});
-
-navCalendar.addEventListener('click', () => {
-    viewCalendar.classList.remove('hidden');
-    viewProfiles.classList.add('hidden');
-    navCalendar.classList.add('active');
-    navProfiles.classList.remove('active');
-});
-
-navProfiles.addEventListener('click', () => {
-    viewCalendar.classList.add('hidden');
-    viewProfiles.classList.remove('hidden');
-    navCalendar.classList.remove('active');
-    navProfiles.classList.add('active');
-});
-
-troubleshootingGuideDiv.addEventListener('click', function(e) {
-    const button = e.target.closest('.accordion-button');
-    if (button) {
-        button.classList.toggle('open');
-        const content = button.nextElementSibling;
-        if (content.style.maxHeight) {
-            content.style.maxHeight = null;
+    notificationBtn.addEventListener('click', () => {
+        if (!("Notification" in window)) {
+            alert("This browser does not support desktop notification");
+        } else if (Notification.permission === "granted") {
+            scheduleWeeklyNotification();
+            alert("Notifications are already enabled and have been rescheduled!");
+        } else if (Notification.permission !== "denied") {
+            Notification.requestPermission().then(function (permission) {
+                if (permission === "granted") {
+                    scheduleWeeklyNotification();
+                    alert("Notifications enabled! You'll get your first reminder next week.");
+                }
+            });
         } else {
-            content.style.maxHeight = content.scrollHeight + "px";
+            alert("Notifications are disabled. Please enable them in your browser settings.");
+        }
+    });
+
+    function scheduleWeeklyNotification() {
+        const selectedPlant = currentPlant;
+        const weekNumber = Math.floor((new Date().getDate() - 1) / 7) + 1;
+        const taskData = plantData[selectedPlant]?.weekly[weekNumber - 1];
+
+        if (taskData) {
+            const taskSummary = taskData.tasks.replace(/<[^>]*>/g, ' ').replace(/\s\s+/g, ' ').substring(0, 100) + '...';
+            const notificationMessage = `Week ${weekNumber} reminder for your ${selectedPlant}: ${taskSummary}`;
+            
+            new Notification("Plant Care Reminder", {
+                body: notificationMessage,
+                icon: "https://placehold.co/192x192/6B8A7A/FFFFFF?text=🌱"
+            });
         }
     }
-});
 
-notificationBtn.addEventListener('click', () => {
-    if (!("Notification" in window)) {
-        alert("This browser does not support desktop notification");
-    } else if (Notification.permission === "granted") {
-        scheduleWeeklyNotification();
-        alert("Notifications are already enabled and have been rescheduled!");
-    } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then(function (permission) {
-            if (permission === "granted") {
-                scheduleWeeklyNotification();
-                alert("Notifications enabled! You'll get your first reminder next week.");
-            }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let isRecognizing = false;
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        speechBtn.addEventListener('click', () => {
+            if (isRecognizing) return;
+            recognition.start();
         });
+
+        recognition.onstart = () => {
+            isRecognizing = true;
+            speechBtn.classList.add('text-red-500');
+        };
+
+        recognition.onresult = (event) => {
+            const speechResult = event.results[0][0].transcript;
+            symptomInput.value = speechResult;
+        };
+
+        recognition.onspeechend = () => {
+            recognition.stop();
+            isRecognizing = false;
+            speechBtn.classList.remove('text-red-500');
+        };
+
+        recognition.onerror = (event) => {
+            alert(`Speech recognition error: ${event.error}`);
+            isRecognizing = false;
+            speechBtn.classList.remove('text-red-500');
+        };
     } else {
-        alert("Notifications are disabled. Please enable them in your browser settings.");
+        speechBtn.style.display = 'none';
     }
-});
 
-function scheduleWeeklyNotification() {
-    const selectedPlant = plantSelector.value;
-    const weekNumber = Math.floor((new Date().getDate() - 1) / 7) + 1;
-    const taskData = plantData[selectedPlant]?.weekly[weekNumber - 1];
 
-    if (taskData) {
-        const taskSummary = taskData.tasks.replace(/<[^>]*>/g, ' ').replace(/\s\s+/g, ' ').substring(0, 100) + '...';
-        const notificationMessage = `Week ${weekNumber} reminder for your ${selectedPlant}: ${taskSummary}`;
-        
-        // This is a simplified example. A real-world app would use a service worker for persistent background notifications.
-        // For this demo, we'll just show one notification now.
-        new Notification("Plant Care Reminder", {
-            body: notificationMessage,
-            icon: "https://placehold.co/192x192/6B8A7A/FFFFFF?text=🌱"
-        });
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    populatePlantSelector();
-    if (plantSelector.options.length > 0) {
-      updateContent(plantSelector.options[0].value);
-    }
-});
+    document.addEventListener('DOMContentLoaded', () => {
+        const initialPlant = Object.keys(plantData)[0];
+        plantSearch.value = initialPlant;
+        updateContent(initialPlant);
+    });
 
 </script>
 </body>
