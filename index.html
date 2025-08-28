@@ -537,10 +537,7 @@
         
         try {
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyCnPeicFKw6NANkP-rnCNwz-aNypxdbSlY";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            
-            const response = await fetch(apiUrl, {
+            const response = await fetch("/api/gemini", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -647,9 +644,7 @@
         
         try {
             const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-            const apiKey = "AIzaSyCnPeicFKw6NANkP-rnCNwz-aNypxdbSlY";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, {
+            const response = await fetch("/api/gemini", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -996,6 +991,7 @@
 </script>
 </body>
 </html>
+
 
 
 
