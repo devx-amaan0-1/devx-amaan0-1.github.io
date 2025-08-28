@@ -537,7 +537,7 @@
         
         try {
             const payload = { contents: chatHistory };
-            const response = await fetch("/api/gemini", {
+            const response = await fetch("/gemini", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -644,7 +644,7 @@
         
         try {
             const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-            const response = await fetch("/api/gemini", {
+            const response = await fetch("/gemini", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -991,6 +991,7 @@
 </script>
 </body>
 </html>
+
 
 
 
