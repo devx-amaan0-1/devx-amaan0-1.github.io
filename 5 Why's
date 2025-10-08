@@ -1,0 +1,538 @@
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Send, Lightbulb, AlertCircle, CheckCircle, Target, Edit3, Loader2, Sparkles } from 'lucide-react';
+
+// --- API Abstraction Layer ---
+// This now contains a real implementation for calling the Gemini API.
+const api = {
+    /**
+     * Calls the Gemini API to generate content.
+     * @param {string} prompt The prompt to send to the LLM.
+     * @param {object | null} responseSchema The JSON schema for a structured response, if needed.
+     * @returns {Promise<any>} The text or parsed JSON response from the LLM.
+     */
+    async generateContent(prompt, responseSchema = null) {
+        const apiKey = ""; // In this environment, the API key is handled automatically.
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+        console.log("--- Sending Prompt to Gemini API ---", { prompt, responseSchema });
+
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+        };
+
+        if (responseSchema) {
+            payload.generationConfig = {
+                responseMimeType: "application/json",
+                responseSchema: responseSchema,
+            };
+        }
+
+        try {
+            // Implements exponential backoff for retries
+            let response;
+            let delay = 1000; // Start with 1 second
+            for (let i = 0; i < 4; i++) { // Try up to 4 times
+                response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    break; // Success, exit loop
+                }
+                
+                if (response.status === 429 || response.status >= 500) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Double the delay for the next retry
+                } else {
+                    break; // Don't retry for other client-side errors
+                }
+            }
+            
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+            }
+
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
+            const responseText = candidate?.content?.parts?.[0]?.text;
+            
+            if (responseText) {
+                 return responseSchema ? JSON.parse(responseText) : responseText;
+            } else {
+                console.error("Invalid response structure from Gemini API:", result);
+                throw new Error("Invalid or empty response from Gemini API.");
+            }
+        } catch (error) {
+            console.error("Error calling Gemini API:", error);
+            throw error; // Re-throw to be caught by the calling function.
+        }
+    }
+};
+
+// --- Localization Setup ---
+const TRANSLATIONS = {
+    "en-US": {
+        "title": "5 Whys: Root Cause Analysis",
+        "subtitle": "A guided reflection to uncover the core of any problem.",
+        "defineProblem": "Define the Problem",
+        "whatChallenge": "What challenge are you facing?",
+        "startAnalysis": "Start Analysis",
+        "whyNumber": "Why #{number}",
+        "edit": "Edit",
+        "submitAnswer": "Submit Answer",
+        "generatingQuestion": "Generating question...",
+        "enterYourAnswer": "Enter your answer...",
+        "analyze": "Analyze Results",
+        "analyzing": "Analyzing your responses...",
+        "analysisComplete": "Analysis Complete",
+        "rootCause": "Root Cause",
+        "solutions": "Actionable Solutions",
+        "keyInsights": "Key Insights",
+        "startNew": "Start New Analysis",
+        "errorParsing": "Could not parse the analysis. Please try again.",
+        "errorGenerating": "An error occurred. Please check your connection or try again.",
+        "getIdeas": "Get Ideas",
+        "suggestingIdeas": "Generating ideas..."
+    },
+};
+const t = (key, params = {}) => {
+    let text = TRANSLATIONS['en-US'][key] || key;
+    for (const param in params) {
+        text = text.replace(`{${param}}`, params[param]);
+    }
+    return text;
+};
+
+
+// --- Child Components ---
+
+const WhyStep = React.memo(({
+    step,
+    isActive,
+    isCompleted,
+    onAnswerChange,
+    onSubmit,
+    onEdit,
+    isSubmitting
+}) => {
+    const inputRef = useRef(null);
+    const { id, question, answer, status } = step;
+    const isEditing = isActive && status !== 'generating_question';
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isEditing]);
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            if (answer.trim()) onSubmit(id);
+        }
+    };
+
+    return (
+        <div className="flex gap-4 md:gap-6">
+            <div className="flex flex-col items-center">
+                <div
+                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-colors duration-300 ${isActive ? 'bg-indigo-600 text-white' : isCompleted ? 'bg-slate-700 text-white' : 'bg-slate-300 text-slate-600'
+                        }`}
+                >
+                    {id + 1}
+                </div>
+                <div className="w-px h-full bg-slate-300" />
+            </div>
+            <div className="flex-1 pb-12 min-w-0">
+                <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-semibold text-slate-800" aria-live="polite">
+                        {status === 'generating_question' ? t('generatingQuestion') : question}
+                    </h3>
+                    {isCompleted && (
+                        <button onClick={() => onEdit(id)} className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                            <Edit3 size={14} />
+                            {t('edit')}
+                        </button>
+                    )}
+                </div>
+
+                {status === 'generating_question' && (
+                    <div className="h-10 flex items-center">
+                        <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                    </div>
+                )}
+
+                {isCompleted && (
+                    <p className="text-slate-600 bg-slate-50 rounded-lg p-3 border border-slate-200">{answer}</p>
+                )}
+
+                {isEditing && (
+                    <div className="space-y-3">
+                        <textarea
+                            ref={inputRef}
+                            value={answer}
+                            onChange={(e) => onAnswerChange(id, e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
+                            placeholder={t('enterYourAnswer')}
+                            rows={3}
+                            aria-label={question}
+                        />
+                        <button
+                            onClick={() => onSubmit(id)}
+                            disabled={!answer.trim() || isSubmitting}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                            {id === 4 ? t('analyze') : t('submitAnswer')}
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+});
+
+
+// --- Main Application Component ---
+
+function FiveWhysApp() {
+    // --- State Management ---
+    const [problem, setProblem] = useState('');
+    const [steps, setSteps] = useState([]);
+    const [appStatus, setAppStatus] = useState('initial'); // initial, running, analyzing, complete, error
+    const [analysisResult, setAnalysisResult] = useState(null);
+    const [error, setError] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [suggestedProblems, setSuggestedProblems] = useState([]);
+    const [isSuggesting, setIsSuggesting] = useState(false);
+    
+    const endOfFlowRef = useRef(null);
+
+    const activeStepIndex = useMemo(() => {
+        if (appStatus !== 'running') return -1;
+        return steps.findIndex(step => step.status === 'active' || step.status === 'generating_question');
+    }, [appStatus, steps]);
+    
+    useEffect(() => {
+        endOfFlowRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [steps, appStatus, suggestedProblems]);
+
+    // --- Core Logic & Handlers ---
+
+    const handleSuggestProblems = useCallback(async () => {
+        setIsSuggesting(true);
+        setError(null);
+        setSuggestedProblems([]);
+        
+        const suggestionsSchema = {
+            type: "OBJECT",
+            properties: { "suggestions": { type: "ARRAY", items: { type: "STRING" } } },
+            required: ["suggestions"]
+        };
+        const prompt = `Suggest three distinct and common problems suitable for a 5 Whys analysis. Cover one personal, one team-based, and one business/product problem. Keep each under 15 words.`;
+
+        try {
+            const result = await api.generateContent(prompt, suggestionsSchema);
+            setSuggestedProblems(result.suggestions || []);
+        } catch (err) {
+            console.error(err);
+            setError(t('errorGenerating'));
+        } finally {
+            setIsSuggesting(false);
+        }
+    }, []);
+
+    const handleStartAnalysis = useCallback(async () => {
+        if (!problem.trim()) return;
+        
+        setIsSubmitting(true);
+        setError(null);
+        setAppStatus('running');
+        setAnalysisResult(null);
+        setSuggestedProblems([]);
+
+        const initialSteps = Array(5).fill(null).map((_, i) => ({
+            id: i,
+            question: t('whyNumber', { number: i + 1 }),
+            answer: '',
+            status: i === 0 ? 'generating_question' : 'pending',
+        }));
+        setSteps(initialSteps);
+
+        try {
+            const firstQuestionPrompt = `You are an expert in root cause analysis. The user has defined a problem. Your task is to ask the first "Why?" question. Make it open-ended and encouraging.
+Problem: "${problem}"
+Respond with only the question.`;
+            const firstQuestion = await api.generateContent(firstQuestionPrompt);
+            
+            setSteps(prev => prev.map(step =>
+                step.id === 0 ? { ...step, question: firstQuestion.trim(), status: 'active' } : step
+            ));
+        } catch (err) {
+            console.error(err);
+            setError(t('errorGenerating'));
+            setAppStatus('error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [problem]);
+
+    const handleAnswerChange = useCallback((id, value) => {
+        setSteps(prev => prev.map(step =>
+            step.id === id ? { ...step, answer: value } : step
+        ));
+    }, []);
+
+    const handleEdit = useCallback((id) => {
+        setAppStatus('running');
+        setAnalysisResult(null);
+        setError(null);
+        setSteps(prev => prev.map((step, index) => {
+            if (index < id) return { ...step, status: 'completed' };
+            if (index === id) return { ...step, status: 'active' };
+            return { ...step, answer: '', question: t('whyNumber', { number: index + 1 }), status: 'pending' };
+        }));
+    }, []);
+
+    const handleWhySubmit = useCallback(async (id) => {
+        if (!steps[id].answer.trim() || isSubmitting) return;
+
+        setIsSubmitting(true);
+        setError(null);
+
+        setSteps(prev => prev.map(step =>
+            step.id === id ? { ...step, status: 'completed' } : step
+        ));
+
+        if (id === 4) {
+            setAppStatus('analyzing');
+            try {
+                const analysisSchema = {
+                    type: "OBJECT",
+                    properties: {
+                        "rootCause": { "type": "STRING" },
+                        "solutions": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "title": { "type": "STRING" }, "description": { "type": "STRING" } }, "required": ["title", "description"]}},
+                        "insights": { "type": "ARRAY", "items": { "type": "STRING" } }
+                    },
+                    "required": ["rootCause", "solutions", "insights"]
+                };
+                const analysisPrompt = `Analyze this 5 Whys session.
+Problem: ${problem}
+${steps.map((s, i) => `Why ${i+1} (${s.question}): ${s.answer}`).join('\n')}`;
+                
+                const parsedResult = await api.generateContent(analysisPrompt, analysisSchema);
+                
+                if (!parsedResult.rootCause || !parsedResult.solutions || !parsedResult.insights) {
+                   throw new Error("Invalid JSON structure from API");
+                }
+                setAnalysisResult(parsedResult);
+                setAppStatus('complete');
+            } catch (err) {
+                console.error(err);
+                setError(t('errorGenerating'));
+                setAppStatus('error');
+            } finally {
+                setIsSubmitting(false);
+            }
+            return;
+        }
+
+        const nextStepIndex = id + 1;
+        setSteps(prev => prev.map(step =>
+            step.id === nextStepIndex ? { ...step, status: 'generating_question' } : step
+        ));
+
+        try {
+            const previousContext = steps.slice(0, id + 1).map(s => `Answer to "${s.question}": "${s.answer}"`).join('\n');
+            const nextQuestionPrompt = `You are a helpful assistant guiding a user through the 5 Whys process. They just answered a question. Now, ask the next "Why?" based on their latest response. Make the question feel natural and conversational.
+Original Problem: "${problem}"
+${previousContext}
+The most recent answer is: "${steps[id].answer}"
+Generate a follow-up "Why?" question based on this answer. Respond with only the question.`;
+
+            const nextQuestion = await api.generateContent(nextQuestionPrompt);
+            setSteps(prev => prev.map(step =>
+                step.id === nextStepIndex ? { ...step, question: nextQuestion.trim(), status: 'active' } : step
+            ));
+        } catch (err) {
+            console.error(err);
+            setError(t('errorGenerating'));
+            setAppStatus('error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [steps, problem, isSubmitting]);
+
+    const handleReset = () => {
+        setProblem('');
+        setSteps([]);
+        setAppStatus('initial');
+        setAnalysisResult(null);
+        setError(null);
+        setIsSubmitting(false);
+        setSuggestedProblems([]);
+    };
+
+    return (
+        <div className="bg-slate-50 font-sans text-slate-800 min-h-screen">
+            <div className="max-w-3xl mx-auto px-4 py-8 md:py-16">
+                <header className="text-center mb-12">
+                    <h1 className="text-4xl md:text-5xl font-bold text-slate-900">{t('title')}</h1>
+                    <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">{t('subtitle')}</p>
+                </header>
+
+                <main>
+                    <div className="flex gap-4 md:gap-6">
+                        <div className="flex flex-col items-center">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-colors duration-300 ${appStatus !== 'initial' ? 'bg-slate-700 text-white' : 'bg-indigo-600 text-white'}`}>
+                                <Target size={18} />
+                            </div>
+                            <div className={`w-px h-full ${appStatus !== 'initial' ? 'bg-slate-300' : 'bg-transparent'}`} />
+                        </div>
+                        <div className="flex-1 pb-8 min-w-0">
+                            <h3 className="text-lg font-semibold text-slate-800 mb-2">{t('defineProblem')}</h3>
+                            {appStatus === 'initial' ? (
+                                <div className="space-y-4">
+                                    <textarea
+                                        value={problem}
+                                        onChange={(e) => setProblem(e.target.value)}
+                                        className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
+                                        placeholder={t('whatChallenge')}
+                                        rows={3}
+                                        aria-label={t('defineProblem')}
+                                    />
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <button
+                                            onClick={handleStartAnalysis}
+                                            disabled={!problem.trim() || isSubmitting || isSuggesting}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : null}
+                                            {t('startAnalysis')}
+                                        </button>
+                                         <button
+                                            onClick={handleSuggestProblems}
+                                            disabled={isSubmitting || isSuggesting}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 font-semibold rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                                        >
+                                            {isSuggesting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} className="text-amber-500" />}
+                                            {isSuggesting ? t('suggestingIdeas') : t('getIdeas')}
+                                        </button>
+                                    </div>
+                                    {suggestedProblems.length > 0 && (
+                                         <div className="flex flex-col items-start gap-2 pt-2">
+                                            {suggestedProblems.map((p, i) => (
+                                                <button key={i} onClick={() => setProblem(p)} className="text-left text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 p-2 rounded-md transition-colors w-full">
+                                                   {p}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-slate-600 bg-slate-100 rounded-lg p-3 border border-slate-200">{problem}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {appStatus === 'running' && steps.length > 0 && (
+                        <div className="flow-root">
+                            {steps.map((step, index) => (
+                                <WhyStep
+                                    key={step.id}
+                                    step={step}
+                                    isActive={activeStepIndex === index}
+                                    isCompleted={step.status === 'completed'}
+                                    onAnswerChange={handleAnswerChange}
+                                    onSubmit={handleWhySubmit}
+                                    onEdit={handleEdit}
+                                    isSubmitting={isSubmitting && activeStepIndex === index}
+                                />
+                            ))}
+                        </div>
+                    )}
+                    
+                    {(appStatus === 'analyzing' || appStatus === 'complete' || appStatus === 'error') && (
+                        <div className="flex gap-4 md:gap-6">
+                           <div className="flex flex-col items-center">
+                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-colors duration-300 ${appStatus === 'complete' ? 'bg-teal-500 text-white' : 'bg-indigo-600 text-white'}`}>
+                                    <CheckCircle size={18} />
+                                </div>
+                           </div>
+                            <div className="flex-1 pb-8 min-w-0">
+                                {appStatus === 'analyzing' && (
+                                    <div className="flex items-center gap-3 text-lg font-semibold text-slate-800">
+                                        <Loader2 className="w-6 h-6 animate-spin" />
+                                        <span>{t('analyzing')}</span>
+                                    </div>
+                                )}
+                                 {appStatus === 'error' && (
+                                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md" role="alert">
+                                        <p className="font-bold">Error</p>
+                                        <p>{error}</p>
+                                    </div>
+                                )}
+                                {appStatus === 'complete' && analysisResult && (
+                                     <div className="space-y-6">
+                                        <h2 className="text-2xl font-bold text-slate-900">{t('analysisComplete')}</h2>
+                                        <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <AlertCircle className="w-6 h-6 text-amber-500" />
+                                                <h3 className="text-xl font-bold text-slate-800">{t('rootCause')}</h3>
+                                            </div>
+                                            <p className="text-slate-600">{analysisResult.rootCause}</p>
+                                        </div>
+                                        <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <Lightbulb className="w-6 h-6 text-teal-500" />
+                                                <h3 className="text-xl font-bold text-slate-800">{t('solutions')}</h3>
+                                            </div>
+                                            <div className="space-y-4">
+                                                {analysisResult.solutions.map((solution, index) => (
+                                                    <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                                        <h4 className="font-bold text-slate-800">{solution.title}</h4>
+                                                        <p className="text-slate-600 mt-1">{solution.description}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
+                                            <h3 className="text-xl font-bold text-slate-800 mb-4">{t('keyInsights')}</h3>
+                                            <ul className="space-y-3">
+                                                {analysisResult.insights.map((insight, index) => (
+                                                    <li key={index} className="flex items-start gap-3">
+                                                        <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0 text-teal-500" />
+                                                        <p className="text-slate-600">{insight}</p>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                     <div ref={endOfFlowRef} />
+                </main>
+
+                {(appStatus === 'complete' || appStatus === 'error') && (
+                    <footer className="text-center mt-12">
+                         <button
+                            onClick={handleReset}
+                            className="px-6 py-3 bg-slate-700 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-800 transition-colors"
+                        >
+                            {t('startNew')}
+                        </button>
+                    </footer>
+                )}
+            </div>
+        </div>
+    );
+}
+
+export default FiveWhysApp;
+
